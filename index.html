@@ -102,7 +102,29 @@
   }
 
   .info-bar span { color: #888; }
-  .info-bar .placement-hint { color: #8cc8ff; }
+  .info-bar .placement-hint {
+    color: #8cc8ff;
+    display: none;
+  }
+
+  .info-bar .placement-hint.visible {
+    display: inline;
+  }
+
+  .birth-heading {
+    color: #6aff8a;
+  }
+
+  .survival-heading {
+    color: #6ab4ff;
+  }
+
+  .visuals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
 
   .patterns-dropdown {
     display: none;
@@ -437,21 +459,21 @@
 <canvas id="canvas"></canvas>
 
 <div class="toolbar">
-  <button id="btn-play" title="Play/Pause (Space)">&#9654; Play</button>
-  <button id="btn-step" title="Step (N)">&#9654;| Step</button>
+  <button type="button" id="btn-play" title="Play/Pause (Space)">&#9654; Play</button>
+  <button type="button" id="btn-step" title="Step (N)">&#9654;| Step</button>
   <div class="separator"></div>
-  <button id="btn-clear" title="Clear (C)">Clear</button>
-  <button id="btn-random" title="Randomize (R)">Random</button>
+  <button type="button" id="btn-clear" title="Clear (C)">Clear</button>
+  <button type="button" id="btn-random" title="Randomize (R)">Random</button>
   <div class="separator"></div>
   <div class="speed-control">
     <span>Speed</span>
     <input type="range" id="speed-slider" min="1" max="60" value="10">
   </div>
   <div class="separator"></div>
-  <button id="btn-mode" title="Toggle Paint/Pan Mode (Tab)">&#9998; Paint</button>
-  <button id="btn-patterns" title="Place Patterns">&#9638; Patterns</button>
-  <button id="btn-rules" title="Edit Rules">&#9881; Rules</button>
-  <button id="btn-reset-view" title="Reset View">Reset View</button>
+  <button type="button" id="btn-mode" title="Toggle Paint/Pan Mode (Tab)">&#9998; Paint</button>
+  <button type="button" id="btn-patterns" title="Place Patterns">&#9638; Patterns</button>
+  <button type="button" id="btn-rules" title="Edit Rules">&#9881; Rules</button>
+  <button type="button" id="btn-reset-view" title="Reset View">Reset View</button>
 </div>
 
 <div class="patterns-dropdown" id="patterns-dropdown"></div>
@@ -461,7 +483,7 @@
   <span>Pop: <span id="info-pop">0</span></span>
   <span>Rule: <span id="info-rule">B3/S23</span></span>
   <span>Zoom: <span id="info-zoom">100%</span></span>
-  <span id="placement-info" class="placement-hint" style="display:none"></span>
+  <span id="placement-info" class="placement-hint"></span>
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
@@ -481,13 +503,13 @@
     </div>
 
     <div class="section">
-      <h3 style="color: #6aff8a;">Birth (B) — Click to toggle</h3>
-      <div id="birth-visuals" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;"></div>
+      <h3 class="birth-heading">Birth (B) — Click to toggle</h3>
+      <div id="birth-visuals" class="visuals-grid"></div>
     </div>
 
     <div class="section">
-      <h3 style="color: #6ab4ff;">Survival (S) — Click to toggle</h3>
-      <div id="survival-visuals" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;"></div>
+      <h3 class="survival-heading">Survival (S) — Click to toggle</h3>
+      <div id="survival-visuals" class="visuals-grid"></div>
     </div>
 
     <div class="section">
@@ -496,8 +518,8 @@
     </div>
 
     <div class="actions">
-      <button class="btn-cancel" id="btn-modal-cancel">Cancel</button>
-      <button class="btn-apply" id="btn-modal-apply">Apply</button>
+      <button type="button" class="btn-cancel" id="btn-modal-cancel">Cancel</button>
+      <button type="button" class="btn-apply" id="btn-modal-apply">Apply</button>
     </div>
   </div>
 </div>
@@ -789,10 +811,10 @@ function updateInfo() {
 
   const pi = document.getElementById('placement-info');
   if (placementPattern) {
-    pi.style.display = 'inline';
+    pi.classList.add('visible');
     pi.textContent = `Placing: ${placementPattern.name} — Click to stamp, ESC or click button to deselect`;
   } else {
-    pi.style.display = 'none';
+    pi.classList.remove('visible');
   }
 }
 

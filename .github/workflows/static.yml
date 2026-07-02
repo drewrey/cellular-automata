@@ -31,13 +31,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      
+      - name: Minify HTML
+        run: npx --yes html-minifier-terser ./index.html --output ./index.html --collapse-whitespace --remove-comments --minify-css true --minify-js true
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          # Upload only the minified HTML file
+          path: './index.html'
+      
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
