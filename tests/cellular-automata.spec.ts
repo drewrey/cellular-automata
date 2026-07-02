@@ -77,7 +77,7 @@ test.describe('Cellular Automata', () => {
     await expect(page.locator('#patterns-dropdown')).toBeVisible();
     
     // Click on a pattern (Glider)
-    await page.locator('#patterns-dropdown button:has-text("Glider")').click();
+    await page.locator('#patterns-dropdown').getByRole('button', { name: 'Glider', exact: true }).click();
     
     // Check that placement mode is active (button should show pattern name)
     const patternsButton = await page.locator('#btn-patterns').textContent();
