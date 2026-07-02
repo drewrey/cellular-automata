@@ -1492,6 +1492,13 @@ function buildColorDropdown() {
 
   drawWheel();
 
+  const hsl = hexToHsl(state.cellColor);
+  const angle = hsl.h * Math.PI / 180;
+  const distance = ((hsl.l - 40) / 20) * 95;
+  const initialX = 100 + Math.cos(angle) * distance;
+  const initialY = 100 + Math.sin(angle) * distance;
+  updateIndicator(initialX, initialY);
+
   let isDragging = false;
 
   canvas.addEventListener('mousedown', (e) => {
