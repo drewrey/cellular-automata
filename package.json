@@ -1,0 +1,16 @@
+{
+  "name": "cellular-automata",
+  "version": "1.0.0",
+  "description": "An interactive web-based cellular automaton simulator with a near-infinite grid, pattern placement, and a visual rules editor.",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
