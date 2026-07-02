@@ -164,6 +164,16 @@ canvas.placing {
   display: inline;
 }
 
+.info-bar .github-link {
+  color: #555;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.info-bar .github-link:hover {
+  color: #888;
+}
+
 .birth-heading {
   color: #6aff8a;
 }
