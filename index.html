@@ -85,6 +85,51 @@
     accent-color: #6ab4ff;
   }
 
+  @media (max-width: 768px) {
+    .toolbar {
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      transform: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 10px;
+      max-width: none;
+    }
+
+    .toolbar button, .toolbar select {
+      padding: 4px 8px;
+      font-size: 11px;
+      flex: 0 0 auto;
+    }
+
+    .toolbar .separator {
+      display: none;
+    }
+
+    .toolbar .speed-control {
+      order: 10;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .toolbar input[type="range"] {
+      width: 100%;
+    }
+
+    .info-bar {
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      transform: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 10px;
+      padding: 4px 8px;
+      max-width: none;
+    }
+  }
+
   .info-bar {
     position: fixed;
     bottom: 16px;
