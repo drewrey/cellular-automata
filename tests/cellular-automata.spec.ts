@@ -46,8 +46,8 @@ test.describe('Cellular Automata', () => {
     // Paint some cells first
     const canvas = page.locator('canvas');
     await canvas.click({ position: { x: 400, y: 300 } });
-    await canvas.click({ position: { x: 401, y: 300 } });
-    await canvas.click({ position: { x: 402, y: 300 } });
+    await canvas.click({ position: { x: 420, y: 300 } });
+    await canvas.click({ position: { x: 440, y: 300 } });
     
     // Get initial generation
     const initialGenText = await page.locator('#info-gen').textContent();
@@ -144,7 +144,9 @@ test.describe('Cellular Automata', () => {
     
     // Paint some cells
     await canvas.click({ position: { x: 400, y: 300 } });
-    await canvas.click({ position: { x: 401, y: 300 } });
+    await canvas.click({ position: { x: 420, y: 300 } });
+    
+    await page.waitForTimeout(100);
     
     // Check population > 0
     const popText = await page.locator('#info-pop').textContent();
