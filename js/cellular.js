@@ -1560,12 +1560,11 @@ document.getElementById('btn-shortcuts').addEventListener('click', toggleShortcu
 document.getElementById('btn-close-shortcuts').addEventListener('click', closeShortcuts);
 
 document.getElementById('btn-share').addEventListener('click', () => {
-  const hash = buildShareHash();
-  window.location.hash = hash;
-  navigator.clipboard.writeText(window.location.href).then(() => {
+  const shareUrl = window.location.origin + window.location.pathname + buildShareHash();
+  navigator.clipboard.writeText(shareUrl).then(() => {
     showToast('Link copied to clipboard');
   }).catch(() => {
-    showToast('URL updated — copy from address bar');
+    showToast('Failed to copy link');
   });
 });
 

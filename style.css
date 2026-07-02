@@ -185,15 +185,20 @@ canvas.placing {
       display: none;
     }
 
+    .toolbar-secondary.expanded {
+      max-height: 200px;
+    }
+
     .info-bar {
       bottom: 8px;
       left: 8px;
       right: 8px;
       transform: none;
       flex-wrap: wrap;
-      gap: 8px;
+      justify-content: center;
+      gap: 4px 12px;
       font-size: 10px;
-      padding: 4px 8px;
+      padding: 4px 10px;
       max-width: none;
     }
   }
