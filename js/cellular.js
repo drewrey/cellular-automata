@@ -884,7 +884,6 @@ document.getElementById('btn-toggle-more').addEventListener('click', () => {
   btn.classList.toggle('expanded', expanded);
   btn.title = expanded ? 'Fewer tools' : 'More tools';
 });
-document.getElementById('btn-toggle-more').classList.add('expanded');
 
 document.getElementById('speed-slider').addEventListener('input', (e) => {
   state.speed = parseInt(e.target.value);

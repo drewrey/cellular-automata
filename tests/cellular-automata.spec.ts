@@ -94,6 +94,9 @@ test.describe('Cellular Automata', () => {
   });
 
   test('5. Rules modal opens, changes rules, applies', async ({ page }) => {
+    // Expand secondary toolbar to access Rules button
+    await page.locator('#btn-toggle-more').click();
+
     // Click rules button
     await page.locator('#btn-rules').click();
     
@@ -131,6 +134,7 @@ test.describe('Cellular Automata', () => {
     expect(newZoom).toBeGreaterThan(initialZoom);
     
     // Reset view
+    await page.locator('#btn-toggle-more').click();
     await page.locator('#btn-reset-view').click();
     
     // Check zoom reset
