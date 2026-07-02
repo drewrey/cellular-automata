@@ -36,8 +36,8 @@
   <button type="button" id="btn-play" title="Play/Pause (Space)">&#9654; Play</button>
   <button type="button" id="btn-step" title="Step (N)">&#9654;| Step</button>
   <div class="separator"></div>
-  <button type="button" id="btn-undo" title="Undo (Ctrl+Z)" style="opacity:0.6">&#8630; Undo</button>
-  <button type="button" id="btn-redo" title="Redo (Ctrl+Shift+Z)" style="opacity:0.6">&#8631; Redo</button>
+  <button type="button" id="btn-undo" class="btn-undo" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+  <button type="button" id="btn-redo" class="btn-redo" title="Redo (Ctrl+Shift+Z)">&#8631; Redo</button>
   <div class="separator"></div>
   <button type="button" id="btn-clear" title="Clear (C)">Clear</button>
   <button type="button" id="btn-random" title="Randomize (R)">Random</button>
@@ -101,7 +101,7 @@
 </div>
 
 <div class="modal-overlay" id="shortcuts-overlay">
-  <div class="modal" style="width:380px">
+  <div class="modal modal-shortcuts">
     <h2>Keyboard Shortcuts</h2>
     <div class="shortcuts-modal-content">
       <kbd>Space</kbd><span class="shortcut-desc">Play / Pause simulation</span>

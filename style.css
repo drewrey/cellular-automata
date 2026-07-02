@@ -47,6 +47,21 @@ canvas.placing {
   transition: all 0.15s;
 }
 
+.toolbar .btn-undo,
+.toolbar .btn-redo {
+  opacity: 0.6;
+}
+
+.toolbar .btn-undo:hover,
+.toolbar .btn-redo:hover {
+  opacity: 1;
+}
+
+.pattern-deselect {
+  opacity: 0.5;
+  font-size: 11px;
+}
+
 .toolbar button:hover, .toolbar select:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.2);
@@ -585,6 +600,10 @@ canvas.placing {
 .visual-label.survive-label {
   color: #6ab4ff;
   font-weight: 600;
+}
+
+.modal-shortcuts {
+  width: 380px;
 }
 
 .shortcuts-modal-content {

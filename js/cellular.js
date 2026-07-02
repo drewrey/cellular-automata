@@ -566,7 +566,7 @@ function placePatternAtMouse() {
 function updatePatternsButton() {
   const btn = document.getElementById('btn-patterns');
   if (selectedPatternDef) {
-    btn.innerHTML = `&#9638; ${selectedPatternDef.name} <span style="opacity:0.5;font-size:11px;">✕</span>`;
+    btn.innerHTML = `&#9638; ${selectedPatternDef.name} <span class="pattern-deselect">✕</span>`;
     btn.classList.add('active');
   } else {
     btn.innerHTML = '&#9638; Patterns';
@@ -1345,7 +1345,8 @@ function updateColorButton(hex) {
   const btn = document.getElementById('btn-color');
   const color = hexToHsl(hex);
   const name = generateColorName(color.h, color.s, color.l);
-  btn.innerHTML = `&#9679; <span style="color:${hex}">${name}</span>`;
+  btn.innerHTML = `&#9679; <span class="color-label">${name}</span>`;
+  btn.querySelector('.color-label').style.color = hex;
 }
 
 function hexToHsl(hex) {
