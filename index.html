@@ -953,6 +953,28 @@ function step() {
   state.generation++;
 }
 
+function forEachVisibleCell(callback) {
+  const cs = state.cellSize;
+  const chunkStartX = toChunk(Math.floor(-state.offsetX / cs));
+  const chunkStartY = toChunk(Math.floor(-state.offsetY / cs));
+  const chunkEndX = toChunk(Math.ceil((canvas.width - state.offsetX) / cs));
+  const chunkEndY = toChunk(Math.ceil((canvas.height - state.offsetY) / cs));
+
+  for (let cy = chunkStartY; cy <= chunkEndY; cy++) {
+    for (let cx = chunkStartX; cx <= chunkEndX; cx++) {
+      const chunk = state.chunks.get(chunkKey(cx, cy));
+      if (!chunk) continue;
+      for (const key of chunk) {
+        const [x, y] = parseKey(key);
+        const sx = x * cs + state.offsetX;
+        const sy = y * cs + state.offsetY;
+        if (sx + cs < 0 || sx > canvas.width || sy + cs < 0 || sy > canvas.height) continue;
+        callback(sx, sy);
+      }
+    }
+  }
+}
+
 function render() {
   ctx.fillStyle = '#0a0a0f';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -998,21 +1020,16 @@ function render() {
   }
 
   const showGlow = cs >= 6;
-  ctx.fillStyle = state.cellColor;
-  
-  for (const key of state.cells) {
-    const [x, y] = parseKey(key);
-    const sx = x * cs + state.offsetX;
-    const sy = y * cs + state.offsetY;
-    if (sx + cs < 0 || sx > canvas.width || sy + cs < 0 || sy > canvas.height) continue;
-
-    if (showGlow) {
-      ctx.fillStyle = state.cellGlow;
+  if (showGlow) {
+    ctx.fillStyle = state.cellGlow;
+    forEachVisibleCell((sx, sy) => {
       ctx.fillRect(sx - 1, sy - 1, cs + 2, cs + 2);
-      ctx.fillStyle = state.cellColor;
-    }
-    ctx.fillRect(sx + 0.5, sy + 0.5, cs - 1, cs - 1);
+    });
   }
+  ctx.fillStyle = state.cellColor;
+  forEachVisibleCell((sx, sy) => {
+    ctx.fillRect(sx + 0.5, sy + 0.5, cs - 1, cs - 1);
+  });
 
   if (placementPattern) {
     const cells = placementPattern.cells;
@@ -1744,6 +1761,31 @@ function getRecentColors() {
   return JSON.parse(localStorage.getItem('recentColors') || '[]');
 }
 
+function renderRecentColorPresets(container) {
+  let presets = container.querySelector('.color-presets');
+  if (!presets) {
+    presets = document.createElement('div');
+    presets.className = 'color-presets';
+    container.appendChild(presets);
+  }
+  presets.innerHTML = '';
+  getRecentColors().forEach(hex => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch';
+    swatch.style.background = hex;
+    swatch.title = generateColorName(...Object.values(hexToHsl(hex)));
+    swatch.addEventListener('click', () => {
+      state.cellColor = hex;
+      state.cellGlow = hex + '26';
+      localStorage.setItem('cellColor', hex);
+      localStorage.setItem('cellGlow', hex + '26');
+      render();
+      updateColorButton(hex);
+    });
+    presets.appendChild(swatch);
+  });
+}
+
 function buildColorDropdown() {
   const container = document.getElementById('color-dropdown');
   container.innerHTML = '';
@@ -1839,6 +1881,7 @@ function buildColorDropdown() {
     localStorage.setItem('cellColor', hex);
     localStorage.setItem('cellGlow', hex + '26');
     saveRecentColor(hex);
+    renderRecentColorPresets(container);
     render();
     updateColorButton(hex);
   });
@@ -1857,6 +1900,7 @@ function buildColorDropdown() {
     localStorage.setItem('cellColor', hex);
     localStorage.setItem('cellGlow', hex + '26');
     saveRecentColor(hex);
+    renderRecentColorPresets(container);
     render();
     updateColorButton(hex);
   });
@@ -1866,27 +1910,7 @@ function buildColorDropdown() {
   });
 
   container.appendChild(wheelContainer);
-
-  const presets = document.createElement('div');
-  presets.className = 'color-presets';
-  const recentColors = getRecentColors();
-  recentColors.forEach(hex => {
-    const swatch = document.createElement('div');
-    swatch.className = 'color-swatch';
-    swatch.style.background = hex;
-    swatch.title = generateColorName(...Object.values(hexToHsl(hex)));
-    swatch.addEventListener('click', () => {
-      state.cellColor = hex;
-      state.cellGlow = hex + '26';
-      localStorage.setItem('cellColor', hex);
-      localStorage.setItem('cellGlow', hex + '26');
-      render();
-      updateColorButton(hex);
-    });
-    presets.appendChild(swatch);
-  });
-
-  container.appendChild(presets);
+  renderRecentColorPresets(container);
 }
 
 function toggleColorDropdown() {
