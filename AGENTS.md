@@ -18,6 +18,18 @@ Playwright for E2E tests. Test files live in `tests/` with descriptive names. Te
 
 Commit and push after each logical unit of work. Delegate independent tasks to subagents in parallel. CI pipeline runs tests before deploying to GitHub Pages. The `public/` directory contains static assets (favicons, manifest) that are copied into `dist/` during deployment. Run `npm test` to verify locally before pushing.
 
+When adding new external files (CSS, JS, images), update `.github/workflows/static.yml` to copy them into `dist/` — the build step only copies `public/` by default; additional `cp` lines are needed for files like `style.css` or directories like `js/`.
+
+## Toolbar & Layout
+
+Prefer a clean, tiered toolbar over a single crammed row. Primary controls (Play, Step, Speed, Paint/Pan, Clear, Random) live in the always-visible top row. Secondary tools (Undo, Redo, Rules, Color, Reset, Help) go in a collapsible row toggled by a ▼ chevron button. Use `max-height` transitions with `overflow: hidden` for smooth expand/collapse animation. The secondary row is hidden by default — cleaner initial load.
+
+Collapsible UI elements that are hidden by default mean tests must expand them first before interacting with their contents. Playwright cannot click elements hidden behind parent containers with `overflow: hidden` and zero height.
+
+## HTML Validation
+
+The CI pipeline runs `html-validate`, which rejects all inline `style=""` attributes in HTML. Never embed `style="..."` in `innerHTML` strings either — use CSS classes and set properties via `element.style.property` programmatically.
+
 ## Evolution Notes
 
 - Pattern definitions are arrays of dot/hash strings — keep them human-readable.
