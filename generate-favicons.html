@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Favicon Generator</title>
+</head>
+<body>
+  <h1>Click buttons to download favicons</h1>
+  <button onclick="generateFavicon(16)">16x16</button>
+  <button onclick="generateFavicon(32)">32x32</button>
+  <button onclick="generateFavicon(180)">180x180 (Apple Touch)</button>
+  <button onclick="generateFavicon(192)">192x192</button>
+  <button onclick="generateFavicon(512)">512x512</button>
+  
+  <script>
+    function generateFavicon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      const scale = size / 32;
+      
+      // Background
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Glider pattern
+      ctx.fillStyle = '#6ab4ff';
+      ctx.fillRect(12 * scale, 4 * scale, 8 * scale, 8 * scale);
+      ctx.fillRect(20 * scale, 12 * scale, 8 * scale, 8 * scale);
+      ctx.fillRect(4 * scale, 20 * scale, 8 * scale, 8 * scale);
+      ctx.fillRect(12 * scale, 20 * scale, 8 * scale, 8 * scale);
+      ctx.fillRect(20 * scale, 20 * scale, 8 * scale, 8 * scale);
+      
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `favicon-${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+  </script>
+</body>
+</html>
