@@ -688,6 +688,9 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+const CHUNK_SIZE = 32;
+const KEY_OFFSET = 1 << 20;
+
 const PRESETS = [
   { name: "Conway's Life", rule: "B3/S23" },
   { name: "HighLife", rule: "B36/S23" },
@@ -775,6 +778,7 @@ function patternBounds(cells) {
 
 let state = {
   cells: new Set(),
+  chunks: new Map(),
   birth: new Set([3]),
   survival: new Set([2, 3]),
   generation: 0,
@@ -825,11 +829,66 @@ function scheduleRender() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-function cellKey(x, y) { return `${x},${y}`; }
+function cellKey(x, y) {
+  return ((x + KEY_OFFSET) << 21) | (y + KEY_OFFSET);
+}
 
 function parseKey(key) {
-  const idx = key.indexOf(',');
-  return [parseInt(key.substring(0, idx), 10), parseInt(key.substring(idx + 1), 10)];
+  const y = (key & 0x1FFFFF) - KEY_OFFSET;
+  const x = ((key >> 21) & 0x1FFFFF) - KEY_OFFSET;
+  return [x, y];
+}
+
+function toChunk(v) {
+  return Math.floor(v / CHUNK_SIZE);
+}
+
+function chunkKey(cx, cy) {
+  return cellKey(cx, cy);
+}
+
+function addCell(x, y) {
+  const key = cellKey(x, y);
+  if (state.cells.has(key)) return;
+  state.cells.add(key);
+  const ck = chunkKey(toChunk(x), toChunk(y));
+  let chunk = state.chunks.get(ck);
+  if (!chunk) {
+    chunk = new Set();
+    state.chunks.set(ck, chunk);
+  }
+  chunk.add(key);
+}
+
+function deleteCell(x, y) {
+  const key = cellKey(x, y);
+  if (!state.cells.has(key)) return;
+  state.cells.delete(key);
+  const ck = chunkKey(toChunk(x), toChunk(y));
+  const chunk = state.chunks.get(ck);
+  if (chunk) {
+    chunk.delete(key);
+    if (chunk.size === 0) state.chunks.delete(ck);
+  }
+}
+
+function clearCells() {
+  state.cells.clear();
+  state.chunks.clear();
+}
+
+function rebuildChunks() {
+  state.chunks.clear();
+  for (const key of state.cells) {
+    const [x, y] = parseKey(key);
+    const ck = chunkKey(toChunk(x), toChunk(y));
+    let chunk = state.chunks.get(ck);
+    if (!chunk) {
+      chunk = new Set();
+      state.chunks.set(ck, chunk);
+    }
+    chunk.add(key);
+  }
 }
 
 function screenToCell(sx, sy) {
@@ -890,6 +949,7 @@ function step() {
   }
 
   state.cells = next;
+  rebuildChunks();
   state.generation++;
 }
 
@@ -1097,7 +1157,7 @@ function placePatternAtMouse() {
   const ox = mouseGridX - Math.floor(bounds.w / 2);
   const oy = mouseGridY - Math.floor(bounds.h / 2);
   for (const [px, py] of cells) {
-    state.cells.add(cellKey(px + ox, py + oy));
+    addCell(px + ox, py + oy);
   }
   render();
 }
@@ -1138,13 +1198,12 @@ canvas.addEventListener('mousedown', (e) => {
 
     mouseDown = true;
     const [cx, cy] = screenToCell(e.clientX, e.clientY);
-    const key = cellKey(cx, cy);
-    if (state.cells.has(key)) {
+    if (state.cells.has(cellKey(cx, cy))) {
       paintMode = 'erase';
-      state.cells.delete(key);
+      deleteCell(cx, cy);
     } else {
       paintMode = 'paint';
-      state.cells.add(key);
+      addCell(cx, cy);
     }
     scheduleRender();
   }
@@ -1176,9 +1235,8 @@ canvas.addEventListener('mousemove', (e) => {
   if (interactionMode === 'pan') return;
 
   if (mouseDown) {
-    const key = cellKey(gx, gy);
-    if (paintMode === 'paint') state.cells.add(key);
-    else state.cells.delete(key);
+    if (paintMode === 'paint') addCell(gx, gy);
+    else deleteCell(gx, gy);
     scheduleRender();
   }
 });
@@ -1285,13 +1343,12 @@ canvas.addEventListener('touchstart', (e) => {
       }, 500);
 
       isTouchPainting = true;
-      const key = cellKey(gx, gy);
-      if (state.cells.has(key)) {
+      if (state.cells.has(cellKey(gx, gy))) {
         touchPaintMode = 'erase';
-        state.cells.delete(key);
+        deleteCell(gx, gy);
       } else {
         touchPaintMode = 'paint';
-        state.cells.add(key);
+        addCell(gx, gy);
       }
       haptic(5);
       scheduleRender();
@@ -1344,9 +1401,8 @@ canvas.addEventListener('touchmove', (e) => {
       state.offsetY = touchStartOffset.y + panDy;
       scheduleRender();
     } else if (isTouchPainting && interactionMode === 'paint') {
-      const key = cellKey(gx, gy);
-      if (touchPaintMode === 'paint') state.cells.add(key);
-      else state.cells.delete(key);
+      if (touchPaintMode === 'paint') addCell(gx, gy);
+      else deleteCell(gx, gy);
       scheduleRender();
     }
 
@@ -1375,18 +1431,18 @@ canvas.addEventListener('touchend', (e) => {
 document.getElementById('btn-play').addEventListener('click', togglePlay);
 document.getElementById('btn-step').addEventListener('click', () => { step(); render(); });
 document.getElementById('btn-clear').addEventListener('click', () => {
-  state.cells.clear();
+  clearCells();
   state.generation = 0;
   render();
 });
 document.getElementById('btn-random').addEventListener('click', () => {
-  state.cells.clear();
+  clearCells();
   state.generation = 0;
   const [sx, sy] = screenToCell(0, 0);
   const [ex, ey] = screenToCell(canvas.width, canvas.height);
   for (let x = sx; x <= ex; x++) {
     for (let y = sy; y <= ey; y++) {
-      if (Math.random() < 0.3) state.cells.add(cellKey(x, y));
+      if (Math.random() < 0.3) addCell(x, y);
     }
   }
   render();
@@ -1454,7 +1510,7 @@ document.addEventListener('keydown', (e) => {
     case 'Space': e.preventDefault(); togglePlay(); break;
     case 'Tab': e.preventDefault(); toggleInteractionMode(); break;
     case 'KeyN': step(); render(); break;
-    case 'KeyC': state.cells.clear(); state.generation = 0; render(); break;
+    case 'KeyC': clearCells(); state.generation = 0; render(); break;
     case 'KeyR': document.getElementById('btn-random').click(); break;
   }
 });
