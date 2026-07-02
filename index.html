@@ -143,6 +143,37 @@
 
   .patterns-dropdown.open { display: block; }
 
+  .color-dropdown {
+    display: none;
+    position: fixed;
+    background: rgba(18, 18, 28, 0.96);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 150;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  }
+
+  .color-dropdown.open { display: flex; gap: 8px; }
+
+  .color-dropdown .color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .color-dropdown .color-swatch:hover {
+    transform: scale(1.1);
+  }
+
+  .color-dropdown .color-swatch.active {
+    border-color: #fff;
+  }
+
   .patterns-category { margin-bottom: 14px; }
   .patterns-category:last-child { margin-bottom: 0; }
 
@@ -340,26 +371,6 @@
     background: rgba(100, 180, 255, 0.3);
   }
 
-  .color-options {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-
-  .color-options .color-swatch {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .color-options .color-swatch.active {
-    border-color: #fff;
-    transform: scale(1.15);
-  }
-
   .visual-grid {
     display: grid;
     grid-template-columns: repeat(3, 18px);
@@ -473,10 +484,12 @@
   <button type="button" id="btn-mode" title="Toggle Paint/Pan Mode (Tab)">&#9998; Paint</button>
   <button type="button" id="btn-patterns" title="Place Patterns">&#9638; Patterns</button>
   <button type="button" id="btn-rules" title="Edit Rules">&#9881; Rules</button>
+  <button type="button" id="btn-color" title="Change Color">&#9679; Color</button>
   <button type="button" id="btn-reset-view" title="Reset View">Reset View</button>
 </div>
 
 <div class="patterns-dropdown" id="patterns-dropdown"></div>
+<div class="color-dropdown" id="color-dropdown"></div>
 
 <div class="info-bar">
   <span>Gen: <span id="info-gen">0</span></span>
@@ -510,11 +523,6 @@
     <div class="section">
       <h3 class="survival-heading">Survival (S) — Click to toggle</h3>
       <div id="survival-visuals" class="visuals-grid"></div>
-    </div>
-
-    <div class="section">
-      <label>Cell Color</label>
-      <div class="color-options" id="color-options"></div>
     </div>
 
     <div class="actions">
@@ -1087,8 +1095,10 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') {
     if (placementPattern) { exitPlacementMode(); return; }
     if (document.getElementById('modal-overlay').classList.contains('open')) { closeModal(); return; }
-    const dd = document.getElementById('patterns-dropdown');
-    if (dd.classList.contains('open')) { closePatternsDropdown(); return; }
+    const patternsDd = document.getElementById('patterns-dropdown');
+    if (patternsDd.classList.contains('open')) { closePatternsDropdown(); return; }
+    const colorDd = document.getElementById('color-dropdown');
+    if (colorDd.classList.contains('open')) { closeColorDropdown(); return; }
   }
 
   if (document.getElementById('modal-overlay').classList.contains('open')) return;
@@ -1180,7 +1190,6 @@ function openModal() {
   document.getElementById('rule-string').value = ruleString();
   buildVisualGrids();
   buildModalPresets();
-  buildModalColors();
 }
 
 function closeModal() {
@@ -1302,8 +1311,8 @@ function buildModalPresets() {
   });
 }
 
-function buildModalColors() {
-  const container = document.getElementById('color-options');
+function buildColorDropdown() {
+  const container = document.getElementById('color-dropdown');
   container.innerHTML = '';
   COLORS.forEach((c, i) => {
     const swatch = document.createElement('div');
@@ -1314,11 +1323,50 @@ function buildModalColors() {
       state.colorIdx = i;
       container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
       swatch.classList.add('active');
+      updateColorButton();
       render();
     });
     container.appendChild(swatch);
   });
 }
+
+function toggleColorDropdown() {
+  const dd = document.getElementById('color-dropdown');
+  const btn = document.getElementById('btn-color');
+  if (dd.classList.contains('open')) {
+    closeColorDropdown();
+  } else {
+    closePatternsDropdown();
+    buildColorDropdown();
+    const rect = btn.getBoundingClientRect();
+    dd.style.top = (rect.bottom + 8) + 'px';
+    dd.style.left = rect.left + 'px';
+    dd.classList.add('open');
+    btn.classList.add('active');
+  }
+}
+
+function closeColorDropdown() {
+  const dd = document.getElementById('color-dropdown');
+  dd.classList.remove('open');
+  document.getElementById('btn-color').classList.remove('active');
+}
+
+function updateColorButton() {
+  const btn = document.getElementById('btn-color');
+  const c = COLORS[state.colorIdx];
+  btn.innerHTML = `&#9679; <span style="color:${c.cell}">${c.name}</span>`;
+}
+
+document.getElementById('btn-color').addEventListener('click', toggleColorDropdown);
+
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('color-dropdown');
+  const btn = document.getElementById('btn-color');
+  if (dd.classList.contains('open') && !dd.contains(e.target) && !btn.contains(e.target)) {
+    closeColorDropdown();
+  }
+});
 
 document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
 
@@ -1348,6 +1396,7 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
 });
 
 buildPatternsDropdown();
+updateColorButton();
 
 state.offsetX = canvas.width / 2;
 state.offsetY = canvas.height / 2;
