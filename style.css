@@ -24,8 +24,8 @@ canvas.placing {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
   background: rgba(18, 18, 28, 0.92);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -33,6 +33,39 @@ canvas.placing {
   padding: 8px 14px;
   z-index: 100;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.toolbar-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-secondary {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, padding 0.25s ease;
+  padding-top: 0;
+}
+
+.toolbar-secondary.expanded {
+  max-height: 48px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.btn-toggle {
+  opacity: 0.5;
+  padding: 6px 8px !important;
+  font-size: 10px !important;
+}
+
+.btn-toggle:hover {
+  opacity: 0.9;
+}
+
+.btn-toggle.expanded {
+  transform: rotate(180deg);
 }
 
 .toolbar button, .toolbar select {
@@ -93,49 +126,47 @@ canvas.placing {
 }
 
 @media (max-width: 768px) {
-  .toolbar {
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    transform: none;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 10px;
-    max-width: none;
-  }
+    .toolbar {
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      transform: none;
+      gap: 4px;
+      padding: 6px 10px;
+      max-width: none;
+    }
 
-  .toolbar button, .toolbar select {
-    padding: 4px 8px;
-    font-size: 11px;
-    flex: 0 0 auto;
-  }
+    .toolbar-row {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
 
-  .toolbar .separator {
-    display: none;
-  }
+    .toolbar .speed-control {
+      order: 10;
+      width: 100%;
+      margin-top: 4px;
+    }
 
-  .toolbar .speed-control {
-    order: 10;
-    width: 100%;
-    margin-top: 4px;
-  }
+    .toolbar input[type="range"] {
+      width: 100%;
+    }
 
-  .toolbar input[type="range"] {
-    width: 100%;
-  }
+    .toolbar .separator {
+      display: none;
+    }
 
-  .info-bar {
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
-    transform: none;
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 10px;
-    padding: 4px 8px;
-    max-width: none;
+    .info-bar {
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      transform: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 10px;
+      padding: 4px 8px;
+      max-width: none;
+    }
   }
-}
 
 .info-bar {
   position: fixed;

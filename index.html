@@ -33,27 +33,32 @@
 <canvas id="canvas"></canvas>
 
 <div class="toolbar">
-  <button type="button" id="btn-play" title="Play/Pause (Space)">&#9654; Play</button>
-  <button type="button" id="btn-step" title="Step (N)">&#9654;| Step</button>
-  <div class="separator"></div>
-  <button type="button" id="btn-undo" class="btn-undo" title="Undo (Ctrl+Z)">&#8630; Undo</button>
-  <button type="button" id="btn-redo" class="btn-redo" title="Redo (Ctrl+Shift+Z)">&#8631; Redo</button>
-  <div class="separator"></div>
-  <button type="button" id="btn-clear" title="Clear (C)">Clear</button>
-  <button type="button" id="btn-random" title="Randomize (R)">Random</button>
-  <div class="separator"></div>
-  <div class="speed-control">
-    <span>Speed</span>
-    <input type="range" id="speed-slider" min="1" max="60" value="10">
+  <div class="toolbar-row">
+    <button type="button" id="btn-play" title="Play/Pause (Space)">&#9654; Play</button>
+    <button type="button" id="btn-step" title="Step (N)">&#9654;| Step</button>
+    <div class="separator"></div>
+    <button type="button" id="btn-mode" title="Toggle Paint/Pan Mode (Tab)">&#9998; Paint</button>
+    <div class="separator"></div>
+    <div class="speed-control">
+      <span>Speed</span>
+      <input type="range" id="speed-slider" min="1" max="60" value="10">
+    </div>
+    <div class="separator"></div>
+    <button type="button" id="btn-clear" title="Clear (C)">Clear</button>
+    <button type="button" id="btn-random" title="Randomize (R)">Random</button>
+    <button type="button" id="btn-patterns" title="Place Patterns">&#9638; Patterns</button>
+    <button type="button" id="btn-toggle-more" class="btn-toggle" title="More tools">&#9660;</button>
   </div>
-  <div class="separator"></div>
-  <button type="button" id="btn-mode" title="Toggle Paint/Pan Mode (Tab)">&#9998; Paint</button>
-  <button type="button" id="btn-patterns" title="Place Patterns">&#9638; Patterns</button>
-  <button type="button" id="btn-rules" title="Edit Rules">&#9881; Rules</button>
-  <button type="button" id="btn-color" title="Change Color">&#9679; Color</button>
-  <button type="button" id="btn-reset-view" title="Reset View">Reset View</button>
-  <div class="separator"></div>
-  <button type="button" id="btn-shortcuts" title="Keyboard Shortcuts (?)">&#63; ?</button>
+  <div class="toolbar-row toolbar-secondary expanded">
+    <button type="button" id="btn-undo" class="btn-undo" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+    <button type="button" id="btn-redo" class="btn-redo" title="Redo (Ctrl+Shift+Z)">&#8631; Redo</button>
+    <div class="separator"></div>
+    <button type="button" id="btn-rules" title="Edit Rules">&#9881; Rules</button>
+    <button type="button" id="btn-color" title="Change Color">&#9679; Color</button>
+    <button type="button" id="btn-reset-view" title="Reset View">Reset View</button>
+    <div class="separator"></div>
+    <button type="button" id="btn-shortcuts" title="Keyboard Shortcuts (?)">&#63; Help</button>
+  </div>
 </div>
 
 <div class="patterns-dropdown" id="patterns-dropdown"></div>

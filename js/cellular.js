@@ -877,6 +877,15 @@ document.getElementById('btn-reset-view').addEventListener('click', () => {
   render();
 });
 
+document.getElementById('btn-toggle-more').addEventListener('click', () => {
+  const sec = document.querySelector('.toolbar-secondary');
+  const btn = document.getElementById('btn-toggle-more');
+  const expanded = sec.classList.toggle('expanded');
+  btn.classList.toggle('expanded', expanded);
+  btn.title = expanded ? 'Fewer tools' : 'More tools';
+});
+document.getElementById('btn-toggle-more').classList.add('expanded');
+
 document.getElementById('speed-slider').addEventListener('input', (e) => {
   state.speed = parseInt(e.target.value);
 });
