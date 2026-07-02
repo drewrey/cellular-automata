@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#6ab4ff">
+<meta name="description" content="Interactive cellular automaton simulator with infinite grid, pattern placement, and visual rules editor">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -777,6 +778,7 @@ let modalSurvival = new Set([2, 3]);
 
 let lastStepTime = 0;
 let animFrameId = null;
+let renderScheduled = false;
 let interactionMode = 'paint';
 let isPanning = false;
 let panStart = null;
@@ -793,7 +795,17 @@ let mouseScreenY = 0;
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  render();
+  scheduleRender();
+}
+
+function scheduleRender() {
+  if (!renderScheduled) {
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      render();
+    });
+  }
 }
 
 window.addEventListener('resize', resizeCanvas);
@@ -802,8 +814,8 @@ resizeCanvas();
 function cellKey(x, y) { return `${x},${y}`; }
 
 function parseKey(key) {
-  const [x, y] = key.split(',').map(Number);
-  return [x, y];
+  const idx = key.indexOf(',');
+  return [parseInt(key.substring(0, idx), 10), parseInt(key.substring(idx + 1), 10)];
 }
 
 function screenToCell(sx, sy) {
@@ -834,20 +846,32 @@ function countNeighbors(x, y) {
 
 function step() {
   const next = new Set();
-  const checked = new Set();
+  const neighborCounts = new Map();
 
   for (const key of state.cells) {
     const [x, y] = parseKey(key);
-    const n = countNeighbors(x, y);
-    if (state.survival.has(n)) next.add(key);
-    for (const [nx, ny] of getNeighbors(x, y)) {
-      const nk = cellKey(nx, ny);
-      if (!checked.has(nk)) {
-        checked.add(nk);
-        if (!state.cells.has(nk)) {
-          if (state.birth.has(countNeighbors(nx, ny))) next.add(nk);
+    let liveNeighbors = 0;
+
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nk = cellKey(x + dx, y + dy);
+        if (state.cells.has(nk)) {
+          liveNeighbors++;
+        } else {
+          neighborCounts.set(nk, (neighborCounts.get(nk) || 0) + 1);
         }
       }
+    }
+
+    if (state.survival.has(liveNeighbors)) {
+      next.add(key);
+    }
+  }
+
+  for (const [key, count] of neighborCounts) {
+    if (state.birth.has(count)) {
+      next.add(key);
     }
   }
 
@@ -899,17 +923,20 @@ function render() {
     ctx.stroke();
   }
 
+  const showGlow = cs >= 6;
+  ctx.fillStyle = state.cellColor;
+  
   for (const key of state.cells) {
     const [x, y] = parseKey(key);
     const sx = x * cs + state.offsetX;
     const sy = y * cs + state.offsetY;
     if (sx + cs < 0 || sx > canvas.width || sy + cs < 0 || sy > canvas.height) continue;
 
-    if (cs >= 6) {
+    if (showGlow) {
       ctx.fillStyle = state.cellGlow;
       ctx.fillRect(sx - 1, sy - 1, cs + 2, cs + 2);
+      ctx.fillStyle = state.cellColor;
     }
-    ctx.fillStyle = state.cellColor;
     ctx.fillRect(sx + 0.5, sy + 0.5, cs - 1, cs - 1);
   }
 
@@ -1079,7 +1106,7 @@ canvas.addEventListener('mousedown', (e) => {
       paintMode = 'paint';
       state.cells.add(key);
     }
-    render();
+    scheduleRender();
   }
 
   if (e.button === 2 && placementPattern) {
@@ -1097,12 +1124,12 @@ canvas.addEventListener('mousemove', (e) => {
   if (isPanning) {
     state.offsetX = panOffsetStart.x + (e.clientX - panStart.x);
     state.offsetY = panOffsetStart.y + (e.clientY - panStart.y);
-    render();
+    scheduleRender();
     return;
   }
 
   if (placementPattern) {
-    render();
+    scheduleRender();
     return;
   }
 
@@ -1112,7 +1139,7 @@ canvas.addEventListener('mousemove', (e) => {
     const key = cellKey(gx, gy);
     if (paintMode === 'paint') state.cells.add(key);
     else state.cells.delete(key);
-    render();
+    scheduleRender();
   }
 });
 
@@ -1157,7 +1184,7 @@ canvas.addEventListener('wheel', (e) => {
   state.offsetX = mx - (mx - state.offsetX) * ratio;
   state.offsetY = my - (my - state.offsetY) * ratio;
   state.cellSize = newCellSize;
-  render();
+  scheduleRender();
 }, { passive: false });
 
 function haptic(duration = 10) {
@@ -1227,7 +1254,7 @@ canvas.addEventListener('touchstart', (e) => {
         state.cells.add(key);
       }
       haptic(5);
-      render();
+      scheduleRender();
     } else {
       isTouchPanning = true;
       touchStartMidpoint = { x: touch.clientX, y: touch.clientY };
@@ -1261,7 +1288,7 @@ canvas.addEventListener('touchmove', (e) => {
     state.offsetX = touchStartMidpoint.x - (touchStartMidpoint.x - touchStartOffset.x) * ratio + panDx;
     state.offsetY = touchStartMidpoint.y - (touchStartMidpoint.y - touchStartOffset.y) * ratio + panDy;
     state.cellSize = newCellSize;
-    render();
+    scheduleRender();
   } else if (e.touches.length === 1) {
     const touch = e.touches[0];
     mouseScreenX = touch.clientX;
@@ -1275,16 +1302,16 @@ canvas.addEventListener('touchmove', (e) => {
       const panDy = touch.clientY - touchStartMidpoint.y;
       state.offsetX = touchStartOffset.x + panDx;
       state.offsetY = touchStartOffset.y + panDy;
-      render();
+      scheduleRender();
     } else if (isTouchPainting && interactionMode === 'paint') {
       const key = cellKey(gx, gy);
       if (touchPaintMode === 'paint') state.cells.add(key);
       else state.cells.delete(key);
-      render();
+      scheduleRender();
     }
 
     if (placementPattern) {
-      render();
+      scheduleRender();
     }
   }
 }, { passive: false });

@@ -43,6 +43,19 @@ Then visit `http://localhost:8000`
 
 The site will be available at `https://<username>.github.io/cellular-automata`
 
+### Regenerating Favicons
+
+If you need to regenerate the favicon PNGs (e.g., after changing the design), use the included scripts:
+
+```bash
+# Using ImageMagick (recommended)
+./generate-favicons.sh
+
+# Or open generate-favicons.html in a browser and click the buttons
+```
+
+**Note:** These scripts are not currently part of the automated deployment process. The generated favicon files are committed to the repository. If you want to automate favicon regeneration in CI/CD, you could add the script execution to `.github/workflows/static.yml` before the build step.
+
 ### Other Platforms
 
 Since this is a static HTML file, it can be deployed to any static hosting service:
