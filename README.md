@@ -75,6 +75,42 @@ Since this is a static HTML file, it can be deployed to any static hosting servi
 - **R**: Randomize the grid
 - **ESC**: Cancel pattern placement or close modals
 
+## Testing
+
+The project includes end-to-end tests using Playwright to verify core functionality.
+
+### Running Tests
+
+First, install dependencies:
+
+```bash
+npm install
+npx playwright install chromium
+```
+
+Then run the test suite:
+
+```bash
+npm test
+```
+
+This will run all 7 E2E tests covering:
+1. Page loads and canvas renders
+2. Cell painting (click to add/remove cells)
+3. Play/pause simulation advances generations
+4. Pattern placement from dropdown
+5. Rules modal opens, changes rules, applies
+6. Zoom and pan interactions
+7. Clear button resets the grid
+
+For interactive test development, use the Playwright UI mode:
+
+```bash
+npm run test:ui
+```
+
+Tests run automatically in CI on every push to main via GitHub Actions.
+
 ## License
 
 MIT
