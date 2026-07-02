@@ -165,4 +165,50 @@ test.describe('Cellular Automata', () => {
     const newPop = parseInt(newPopText || '0');
     expect(newPop).toBe(0);
   });
+
+  test('7. Share button builds URL hash from current state', async ({ page }) => {
+    const canvas = page.locator('canvas');
+
+    // Paint some cells
+    await canvas.click({ position: { x: 400, y: 300 } });
+    await canvas.click({ position: { x: 420, y: 300 } });
+    await canvas.click({ position: { x: 440, y: 300 } });
+
+    // Expand secondary toolbar to access Share button
+    await page.locator('#btn-toggle-more').click();
+
+    // Click Share
+    await page.locator('#btn-share').click();
+    await page.waitForTimeout(200);
+
+    // Verify URL hash exists and has expected format
+    const hash = await page.evaluate(() => window.location.hash);
+    expect(hash).toMatch(/^#B3\.S23:6ab4ff:\d+:[A-Za-z0-9\-_]+$/);
+
+    // Verify toast appeared
+    await expect(page.locator('#share-toast')).toBeVisible();
+  });
+
+  test('8. URL hash restores state on page load', async ({ page }) => {
+    // Build a shared hash from a page with known state
+    await page.goto('/');
+    const canvas = page.locator('canvas');
+    await canvas.click({ position: { x: 400, y: 300 } });
+    await canvas.click({ position: { x: 420, y: 300 } });
+    await canvas.click({ position: { x: 440, y: 300 } });
+
+    await page.locator('#btn-toggle-more').click();
+    await page.locator('#btn-share').click();
+    await page.waitForTimeout(200);
+
+    const shareHash = await page.evaluate(() => window.location.hash);
+
+    // Navigate to the shared URL
+    await page.goto('/' + shareHash);
+
+    // Verify cells were restored (3 cells painted)
+    const popText = await page.locator('#info-pop').textContent();
+    const pop = parseInt(popText || '0');
+    expect(pop).toBe(3);
+  });
 });

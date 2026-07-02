@@ -88,6 +88,133 @@ function patternBounds(cells) {
   return { minX, minY, maxX, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 
+function zigzag(n) {
+  return (n << 1) ^ (n >> 31);
+}
+
+function zigzagDecode(n) {
+  return (n >>> 1) ^ -(n & 1);
+}
+
+function writeVarint(buf, value) {
+  value = value >>> 0;
+  while (value >= 0x80) {
+    buf.push((value & 0x7f) | 0x80);
+    value >>>= 7;
+  }
+  buf.push(value & 0x7f);
+}
+
+function readVarint(bytes, idx) {
+  let result = 0;
+  let shift = 0;
+  while (idx.i < bytes.length) {
+    const byte = bytes[idx.i++];
+    result |= (byte & 0x7f) << shift;
+    if (!(byte & 0x80)) break;
+    shift += 7;
+  }
+  return result >>> 0;
+}
+
+function bytesToBase64Url(arr) {
+  let binary = '';
+  for (let i = 0; i < arr.length; i++) {
+    binary += String.fromCharCode(arr[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToBytes(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function encodeCells(cellsSet) {
+  const arr = [];
+  for (const key of cellsSet) {
+    const [x, y] = parseKey(key);
+    arr.push([x, y]);
+  }
+  arr.sort((a, b) => a[1] === b[1] ? a[0] - b[0] : a[1] - b[1]);
+
+  const buf = [];
+  if (arr.length > 0) {
+    writeVarint(buf, zigzag(arr[0][0]));
+    writeVarint(buf, zigzag(arr[0][1]));
+    for (let i = 1; i < arr.length; i++) {
+      writeVarint(buf, zigzag(arr[i][0] - arr[i - 1][0]));
+      writeVarint(buf, zigzag(arr[i][1] - arr[i - 1][1]));
+    }
+  }
+  return bytesToBase64Url(new Uint8Array(buf));
+}
+
+function decodeCells(base64Data) {
+  const bytes = base64UrlToBytes(base64Data);
+  if (bytes.length === 0) return [];
+
+  const idx = { i: 0 };
+  const cells = [];
+
+  const firstX = zigzagDecode(readVarint(bytes, idx));
+  const firstY = zigzagDecode(readVarint(bytes, idx));
+  cells.push([firstX, firstY]);
+
+  while (idx.i < bytes.length) {
+    const dx = zigzagDecode(readVarint(bytes, idx));
+    const dy = zigzagDecode(readVarint(bytes, idx));
+    cells.push([cells[cells.length - 1][0] + dx, cells[cells.length - 1][1] + dy]);
+  }
+  return cells;
+}
+
+function buildShareHash() {
+  const ruleEncoded = ruleString().replace(/\//g, '.');
+  const colorHex = state.cellColor.replace('#', '');
+  const gen = state.generation;
+  const cellsEncoded = encodeCells(state.cells);
+  return `#${ruleEncoded}:${colorHex}:${gen}:${cellsEncoded}`;
+}
+
+function loadFromHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return false;
+
+  const parts = hash.split(':');
+  if (parts.length < 4) return false;
+
+  const ruleStr = parts[0].replace(/\./g, '/');
+  const colorHex = '#' + parts[1];
+  const gen = parseInt(parts[2], 10);
+  const cellsData = parts[3];
+
+  const parsed = parseRule(ruleStr);
+  if (!parsed) return false;
+
+  try {
+    const cells = decodeCells(cellsData);
+    clearCells();
+    state.birth = parsed.birth;
+    state.survival = parsed.survival;
+    state.generation = gen;
+    state.cellColor = colorHex;
+    state.cellGlow = colorHex + '26';
+    for (const [x, y] of cells) {
+      addCell(x, y);
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 let state = {
   cells: new Set(),
   chunks: new Map(),
@@ -1432,6 +1559,26 @@ document.getElementById('shortcuts-overlay').addEventListener('click', (e) => {
 document.getElementById('btn-shortcuts').addEventListener('click', toggleShortcuts);
 document.getElementById('btn-close-shortcuts').addEventListener('click', closeShortcuts);
 
+document.getElementById('btn-share').addEventListener('click', () => {
+  const hash = buildShareHash();
+  window.location.hash = hash;
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    showToast('Link copied to clipboard');
+  }).catch(() => {
+    showToast('URL updated — copy from address bar');
+  });
+});
+
+function showToast(message) {
+  const toast = document.getElementById('share-toast');
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast.classList.remove('visible');
+  }, 2000);
+}
+
 buildPatternsDropdown();
 
 if (getRecentColors().length === 0) {
@@ -1440,6 +1587,14 @@ if (getRecentColors().length === 0) {
 }
 
 updateColorButton(state.cellColor);
+
+if (window.location.hash && window.location.hash.length > 1) {
+  const loaded = loadFromHash();
+  if (loaded) {
+    history.replaceState(null, '', window.location.pathname);
+    updateColorButton(state.cellColor);
+  }
+}
 
 state.offsetX = canvas.width / 2;
 state.offsetY = canvas.height / 2;
