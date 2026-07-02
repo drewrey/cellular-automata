@@ -943,7 +943,11 @@ function updateInfo() {
   const pi = document.getElementById('placement-info');
   if (placementPattern) {
     pi.classList.add('visible');
-    pi.textContent = `Placing: ${placementPattern.name} — Click to stamp, ESC or click button to deselect`;
+    const isTouchDevice = 'ontouchstart' in window;
+    const instruction = isTouchDevice
+      ? `Placing: ${placementPattern.name} — Tap to stamp, tap button to deselect`
+      : `Placing: ${placementPattern.name} — Click to stamp, ESC or click button to deselect`;
+    pi.textContent = instruction;
   } else {
     pi.classList.remove('visible');
   }
@@ -996,6 +1000,7 @@ function enterPlacementMode(patternDef) {
   canvas.style.cursor = 'copy';
   closePatternsDropdown();
   updatePatternsButton();
+  haptic(20);
   render();
 }
 
@@ -1149,6 +1154,151 @@ canvas.addEventListener('wheel', (e) => {
   render();
 }, { passive: false });
 
+function haptic(duration = 10) {
+  if (navigator.vibrate) {
+    navigator.vibrate(duration);
+  }
+}
+
+let touchStartDistance = 0;
+let touchStartCellSize = 0;
+let touchStartMidpoint = { x: 0, y: 0 };
+let touchStartOffset = { x: 0, y: 0 };
+let isTouchPanning = false;
+let isTouchPainting = false;
+let touchPaintMode = null;
+let longPressTimer = null;
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+
+  if (e.touches.length === 2) {
+    isTouchPanning = true;
+    isTouchPainting = false;
+    clearTimeout(longPressTimer);
+
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+    touchStartCellSize = state.cellSize;
+    touchStartMidpoint = {
+      x: (touch1.clientX + touch2.clientX) / 2,
+      y: (touch1.clientY + touch2.clientY) / 2
+    };
+    touchStartOffset = { x: state.offsetX, y: state.offsetY };
+    haptic(5);
+  } else if (e.touches.length === 1) {
+    const touch = e.touches[0];
+    mouseScreenX = touch.clientX;
+    mouseScreenY = touch.clientY;
+    const [gx, gy] = screenToCell(touch.clientX, touch.clientY);
+    mouseGridX = gx;
+    mouseGridY = gy;
+
+    if (placementPattern) {
+      placePatternAtMouse();
+      haptic(20);
+      return;
+    }
+
+    if (interactionMode === 'paint') {
+      longPressTimer = setTimeout(() => {
+        isTouchPanning = true;
+        touchStartMidpoint = { x: touch.clientX, y: touch.clientY };
+        touchStartOffset = { x: state.offsetX, y: state.offsetY };
+        haptic(10);
+      }, 500);
+
+      isTouchPainting = true;
+      const key = cellKey(gx, gy);
+      if (state.cells.has(key)) {
+        touchPaintMode = 'erase';
+        state.cells.delete(key);
+      } else {
+        touchPaintMode = 'paint';
+        state.cells.add(key);
+      }
+      haptic(5);
+      render();
+    } else {
+      isTouchPanning = true;
+      touchStartMidpoint = { x: touch.clientX, y: touch.clientY };
+      touchStartOffset = { x: state.offsetX, y: state.offsetY };
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  clearTimeout(longPressTimer);
+
+  if (e.touches.length === 2 && isTouchPanning) {
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+    const currentMidpoint = {
+      x: (touch1.clientX + touch2.clientX) / 2,
+      y: (touch1.clientY + touch2.clientY) / 2
+    };
+
+    const scale = currentDistance / touchStartDistance;
+    const newCellSize = Math.max(2, Math.min(80, touchStartCellSize * scale));
+    const ratio = newCellSize / touchStartCellSize;
+
+    const panDx = currentMidpoint.x - touchStartMidpoint.x;
+    const panDy = currentMidpoint.y - touchStartMidpoint.y;
+
+    state.offsetX = touchStartMidpoint.x - (touchStartMidpoint.x - touchStartOffset.x) * ratio + panDx;
+    state.offsetY = touchStartMidpoint.y - (touchStartMidpoint.y - touchStartOffset.y) * ratio + panDy;
+    state.cellSize = newCellSize;
+    render();
+  } else if (e.touches.length === 1) {
+    const touch = e.touches[0];
+    mouseScreenX = touch.clientX;
+    mouseScreenY = touch.clientY;
+    const [gx, gy] = screenToCell(touch.clientX, touch.clientY);
+    mouseGridX = gx;
+    mouseGridY = gy;
+
+    if (isTouchPanning) {
+      const panDx = touch.clientX - touchStartMidpoint.x;
+      const panDy = touch.clientY - touchStartMidpoint.y;
+      state.offsetX = touchStartOffset.x + panDx;
+      state.offsetY = touchStartOffset.y + panDy;
+      render();
+    } else if (isTouchPainting && interactionMode === 'paint') {
+      const key = cellKey(gx, gy);
+      if (touchPaintMode === 'paint') state.cells.add(key);
+      else state.cells.delete(key);
+      render();
+    }
+
+    if (placementPattern) {
+      render();
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  clearTimeout(longPressTimer);
+
+  if (e.touches.length === 0) {
+    isTouchPanning = false;
+    isTouchPainting = false;
+    touchPaintMode = null;
+  } else if (e.touches.length === 1) {
+    const touch = e.touches[0];
+    isTouchPanning = true;
+    touchStartMidpoint = { x: touch.clientX, y: touch.clientY };
+    touchStartOffset = { x: state.offsetX, y: state.offsetY };
+  }
+}, { passive: false });
+
 document.getElementById('btn-play').addEventListener('click', togglePlay);
 document.getElementById('btn-step').addEventListener('click', () => { step(); render(); });
 document.getElementById('btn-clear').addEventListener('click', () => {
@@ -1198,6 +1348,7 @@ function togglePlay() {
     btn.innerHTML = '&#9654; Play';
     btn.classList.remove('active');
   }
+  haptic(10);
 }
 
 function toggleInteractionMode() {
@@ -1212,6 +1363,7 @@ function toggleInteractionMode() {
     btn.classList.remove('active');
     canvas.style.cursor = placementPattern ? 'copy' : 'crosshair';
   }
+  haptic(15);
 }
 
 document.addEventListener('keydown', (e) => {
