@@ -830,12 +830,13 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 function cellKey(x, y) {
-  return ((x + KEY_OFFSET) << 21) | (y + KEY_OFFSET);
+  // Use multiplication, not bitwise shift — JS bitwise ops truncate to 32 bits.
+  return (x + KEY_OFFSET) * (1 << 21) + (y + KEY_OFFSET);
 }
 
 function parseKey(key) {
   const y = (key & 0x1FFFFF) - KEY_OFFSET;
-  const x = ((key >> 21) & 0x1FFFFF) - KEY_OFFSET;
+  const x = Math.floor(key / (1 << 21)) - KEY_OFFSET;
   return [x, y];
 }
 
@@ -1866,6 +1867,24 @@ function buildColorDropdown() {
   updateIndicator(initialX, initialY);
 
   let isDragging = false;
+  let pendingDragHex = null;
+
+  function previewDragColor(hex) {
+    pendingDragHex = hex;
+    state.cellColor = hex;
+    state.cellGlow = hex + '26';
+    render();
+    updateColorButton(hex);
+  }
+
+  function persistDragColor() {
+    if (!pendingDragHex) return;
+    localStorage.setItem('cellColor', pendingDragHex);
+    localStorage.setItem('cellGlow', pendingDragHex + '26');
+    saveRecentColor(pendingDragHex);
+    renderRecentColorPresets(container);
+    pendingDragHex = null;
+  }
 
   canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
@@ -1876,14 +1895,7 @@ function buildColorDropdown() {
 
     const color = getColorFromPosition(x, y);
     const hex = hslToHex(color.hue, color.saturation, color.lightness);
-    state.cellColor = hex;
-    state.cellGlow = hex + '26';
-    localStorage.setItem('cellColor', hex);
-    localStorage.setItem('cellGlow', hex + '26');
-    saveRecentColor(hex);
-    renderRecentColorPresets(container);
-    render();
-    updateColorButton(hex);
+    previewDragColor(hex);
   });
 
   canvas.addEventListener('mousemove', (e) => {
@@ -1895,17 +1907,11 @@ function buildColorDropdown() {
 
     const color = getColorFromPosition(x, y);
     const hex = hslToHex(color.hue, color.saturation, color.lightness);
-    state.cellColor = hex;
-    state.cellGlow = hex + '26';
-    localStorage.setItem('cellColor', hex);
-    localStorage.setItem('cellGlow', hex + '26');
-    saveRecentColor(hex);
-    renderRecentColorPresets(container);
-    render();
-    updateColorButton(hex);
+    previewDragColor(hex);
   });
 
   document.addEventListener('mouseup', () => {
+    if (isDragging) persistDragColor();
     isDragging = false;
   });
 
