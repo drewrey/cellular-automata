@@ -730,7 +730,8 @@ let state = {
   cellSize: 16,
   offsetX: 0,
   offsetY: 0,
-  colorIdx: 0,
+  cellColor: "#6ab4ff",
+  cellGlow: "rgba(106,180,255,0.15)",
 };
 
 let modalBirth = new Set([3]);
@@ -817,8 +818,7 @@ function step() {
 }
 
 function render() {
-  const colors = COLORS[state.colorIdx];
-  ctx.fillStyle = colors.bg;
+  ctx.fillStyle = '#0a0a0f';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const cs = state.cellSize;
@@ -868,10 +868,10 @@ function render() {
     if (sx + cs < 0 || sx > canvas.width || sy + cs < 0 || sy > canvas.height) continue;
 
     if (cs >= 6) {
-      ctx.fillStyle = colors.glow;
+      ctx.fillStyle = state.cellGlow;
       ctx.fillRect(sx - 1, sy - 1, cs + 2, cs + 2);
     }
-    ctx.fillStyle = colors.cell;
+    ctx.fillStyle = state.cellColor;
     ctx.fillRect(sx + 0.5, sy + 0.5, cs - 1, cs - 1);
   }
 
@@ -882,7 +882,7 @@ function render() {
     const oy = mouseGridY - Math.floor(bounds.h / 2);
 
     ctx.globalAlpha = 0.35;
-    ctx.fillStyle = colors.cell;
+    ctx.fillStyle = state.cellColor;
     for (const [px, py] of cells) {
       const sx = (px + ox) * cs + state.offsetX;
       const sy = (py + oy) * cs + state.offsetY;
@@ -1405,20 +1405,130 @@ function buildModalPresets() {
 function buildColorDropdown() {
   const container = document.getElementById('color-dropdown');
   container.innerHTML = '';
+
+  const wheelContainer = document.createElement('div');
+  wheelContainer.className = 'color-wheel-container';
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'color-wheel';
+  canvas.width = 200;
+  canvas.height = 200;
+  const ctx = canvas.getContext('2d');
+
+  const indicator = document.createElement('div');
+  indicator.className = 'color-wheel-indicator';
+
+  wheelContainer.appendChild(canvas);
+  wheelContainer.appendChild(indicator);
+
+  function drawWheel() {
+    const centerX = 100;
+    const centerY = 100;
+    const radius = 95;
+
+    for (let angle = 0; angle < 360; angle++) {
+      const startAngle = (angle - 1) * Math.PI / 180;
+      const endAngle = (angle + 1) * Math.PI / 180;
+
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.closePath();
+
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+      gradient.addColorStop(0, `hsl(${angle}, 0%, 100%)`);
+      gradient.addColorStop(1, `hsl(${angle}, 100%, 50%)`);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+  }
+
+  function getColorFromPosition(x, y) {
+    const centerX = 100;
+    const centerY = 100;
+    const dx = x - centerX;
+    const dy = y - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    const hue = (angle + 360) % 360;
+    const saturation = Math.min(100, (distance / 95) * 100);
+    const lightness = 50;
+    return { hue, saturation, lightness };
+  }
+
+  function updateIndicator(x, y) {
+    indicator.style.left = x + 'px';
+    indicator.style.top = y + 'px';
+  }
+
+  function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
+  drawWheel();
+
+  let isDragging = false;
+
+  canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    updateIndicator(x, y);
+
+    const color = getColorFromPosition(x, y);
+    const hex = hslToHex(color.hue, color.saturation, color.lightness);
+    state.cellColor = hex;
+    state.cellGlow = hex + '26';
+    render();
+    updateColorButton(hex);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    updateIndicator(x, y);
+
+    const color = getColorFromPosition(x, y);
+    const hex = hslToHex(color.hue, color.saturation, color.lightness);
+    state.cellColor = hex;
+    state.cellGlow = hex + '26';
+    render();
+    updateColorButton(hex);
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  container.appendChild(wheelContainer);
+
+  const presets = document.createElement('div');
+  presets.className = 'color-presets';
   COLORS.forEach((c, i) => {
     const swatch = document.createElement('div');
-    swatch.className = 'color-swatch' + (i === state.colorIdx ? ' active' : '');
+    swatch.className = 'color-swatch';
     swatch.style.background = c.cell;
     swatch.title = c.name;
     swatch.addEventListener('click', () => {
-      state.colorIdx = i;
-      container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-      swatch.classList.add('active');
-      updateColorButton();
+      state.cellColor = c.cell;
+      state.cellGlow = c.glow;
       render();
+      updateColorButton(c.cell);
     });
-    container.appendChild(swatch);
+    presets.appendChild(swatch);
   });
+
+  container.appendChild(presets);
 }
 
 function toggleColorDropdown() {
@@ -1443,10 +1553,9 @@ function closeColorDropdown() {
   document.getElementById('btn-color').classList.remove('active');
 }
 
-function updateColorButton() {
+function updateColorButton(color) {
   const btn = document.getElementById('btn-color');
-  const c = COLORS[state.colorIdx];
-  btn.innerHTML = `&#9679; <span style="color:${c.cell}">${c.name}</span>`;
+  btn.innerHTML = `&#9679; <span style="color:${color}">Custom</span>`;
 }
 
 document.getElementById('btn-color').addEventListener('click', toggleColorDropdown);
@@ -1487,7 +1596,7 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
 });
 
 buildPatternsDropdown();
-updateColorButton();
+updateColorButton(state.cellColor);
 
 state.offsetX = canvas.width / 2;
 state.offsetY = canvas.height / 2;
