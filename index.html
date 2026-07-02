@@ -686,19 +686,6 @@ const PATTERNS = [
   }
 ];
 
-const COLORS = [
-  { name: "Neon Meadow", bg: "#0a0a0f", cell: "#6ab4ff", glow: "rgba(106,180,255,0.15)" },
-  { name: "Cyber Dawn", bg: "#0f0d0a", cell: "#ffc46a", glow: "rgba(255,196,106,0.15)" },
-  { name: "Quantum Stream", bg: "#0a0f0f", cell: "#6affff", glow: "rgba(106,255,255,0.15)" },
-  { name: "Holographic Grove", bg: "#0f0a0f", cell: "#ff6acc", glow: "rgba(255,106,204,0.15)" },
-  { name: "Synth Breeze", bg: "#0a0f0a", cell: "#6aff8a", glow: "rgba(106,255,138,0.15)" },
-  { name: "Plasma Field", bg: "#0a0a0f", cell: "#c46aff", glow: "rgba(196,106,255,0.15)" },
-  { name: "Digital Petal", bg: "#0f0a0a", cell: "#ff6a6a", glow: "rgba(255,106,106,0.15)" },
-  { name: "Binary Bloom", bg: "#0a0f0a", cell: "#c4ff6a", glow: "rgba(196,255,106,0.15)" },
-  { name: "Fractal Fern", bg: "#0a0f0c", cell: "#6affb4", glow: "rgba(106,255,180,0.15)" },
-  { name: "Neural Sunset", bg: "#0f0a0a", cell: "#ff9a6a", glow: "rgba(255,154,106,0.15)" },
-];
-
 function parsePatternRows(rows) {
   const cells = [];
   rows.forEach((row, y) => {
@@ -1421,6 +1408,18 @@ function generateColorName(hue, saturation, lightness) {
   return `${adjName} ${hueName}`;
 }
 
+function saveRecentColor(hex) {
+  let recent = JSON.parse(localStorage.getItem('recentColors') || '[]');
+  recent = recent.filter(c => c !== hex);
+  recent.unshift(hex);
+  recent = recent.slice(0, 10);
+  localStorage.setItem('recentColors', JSON.stringify(recent));
+}
+
+function getRecentColors() {
+  return JSON.parse(localStorage.getItem('recentColors') || '[]');
+}
+
 function buildColorDropdown() {
   const container = document.getElementById('color-dropdown');
   container.innerHTML = '';
@@ -1508,6 +1507,7 @@ function buildColorDropdown() {
     state.cellGlow = hex + '26';
     localStorage.setItem('cellColor', hex);
     localStorage.setItem('cellGlow', hex + '26');
+    saveRecentColor(hex);
     render();
     updateColorButton(hex);
   });
@@ -1525,6 +1525,7 @@ function buildColorDropdown() {
     state.cellGlow = hex + '26';
     localStorage.setItem('cellColor', hex);
     localStorage.setItem('cellGlow', hex + '26');
+    saveRecentColor(hex);
     render();
     updateColorButton(hex);
   });
@@ -1537,18 +1538,19 @@ function buildColorDropdown() {
 
   const presets = document.createElement('div');
   presets.className = 'color-presets';
-  COLORS.forEach((c, i) => {
+  const recentColors = getRecentColors();
+  recentColors.forEach(hex => {
     const swatch = document.createElement('div');
     swatch.className = 'color-swatch';
-    swatch.style.background = c.cell;
-    swatch.title = c.name;
+    swatch.style.background = hex;
+    swatch.title = generateColorName(...Object.values(hexToHsl(hex)));
     swatch.addEventListener('click', () => {
-      state.cellColor = c.cell;
-      state.cellGlow = c.glow;
-      localStorage.setItem('cellColor', c.cell);
-      localStorage.setItem('cellGlow', c.glow);
+      state.cellColor = hex;
+      state.cellGlow = hex + '26';
+      localStorage.setItem('cellColor', hex);
+      localStorage.setItem('cellGlow', hex + '26');
       render();
-      updateColorButton(c.cell);
+      updateColorButton(hex);
     });
     presets.appendChild(swatch);
   });
@@ -1646,6 +1648,12 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
 });
 
 buildPatternsDropdown();
+
+if (getRecentColors().length === 0) {
+  const defaultColors = ['#6ab4ff', '#6aff8a', '#ffc46a', '#ff6acc', '#c46aff'];
+  defaultColors.forEach(c => saveRecentColor(c));
+}
+
 updateColorButton(state.cellColor);
 
 state.offsetX = canvas.width / 2;
