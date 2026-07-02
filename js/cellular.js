@@ -1421,6 +1421,7 @@ function closeShortcuts() {
 document.getElementById('shortcuts-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeShortcuts();
 });
+document.getElementById('btn-shortcuts').addEventListener('click', toggleShortcuts);
 document.getElementById('btn-close-shortcuts').addEventListener('click', closeShortcuts);
 
 buildPatternsDropdown();
