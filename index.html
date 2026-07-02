@@ -1015,9 +1015,23 @@ function parseRule(str) {
   };
 }
 
+function updatePlayButton() {
+  const btn = document.getElementById('btn-play');
+  if (state.running) {
+    btn.innerHTML = '&#9646;&#9646; Pause';
+    btn.classList.add('active');
+  } else {
+    btn.innerHTML = '&#9654; Play';
+    btn.classList.remove('active');
+  }
+}
+
 function loop(timestamp) {
+  if (!state.running) {
+    animFrameId = null;
+    return;
+  }
   animFrameId = requestAnimationFrame(loop);
-  if (!state.running) return;
   const interval = 1000 / state.speed;
   if (timestamp - lastStepTime >= interval) {
     step();
@@ -1025,7 +1039,19 @@ function loop(timestamp) {
     lastStepTime = timestamp;
   }
 }
-animFrameId = requestAnimationFrame(loop);
+
+function startLoop() {
+  if (animFrameId !== null) return;
+  lastStepTime = performance.now();
+  animFrameId = requestAnimationFrame(loop);
+}
+
+function stopLoop() {
+  if (animFrameId !== null) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+}
 
 function enterPlacementMode(patternDef) {
   if (selectedPatternDef && selectedPatternDef.name === patternDef.name) {
@@ -1387,14 +1413,12 @@ document.getElementById('speed-slider').addEventListener('input', (e) => {
 
 function togglePlay() {
   state.running = !state.running;
-  const btn = document.getElementById('btn-play');
   if (state.running) {
-    btn.innerHTML = '&#9646;&#9646; Pause';
-    btn.classList.add('active');
+    startLoop();
   } else {
-    btn.innerHTML = '&#9654; Play';
-    btn.classList.remove('active');
+    stopLoop();
   }
+  updatePlayButton();
   haptic(10);
 }
 
