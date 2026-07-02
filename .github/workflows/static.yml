@@ -73,6 +73,8 @@ jobs:
         run: |
           mkdir -p dist
           npx --yes html-minifier-terser ./index.html --output ./dist/index.html --collapse-whitespace --remove-comments --minify-css true --minify-js true
+          cp style.css dist/
+          cp -r js dist/
           cp -r public dist/
       
       - name: Upload artifact
