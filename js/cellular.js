@@ -608,10 +608,13 @@ function updateInfo() {
   const pi = document.getElementById('placement-info');
   if (placementPattern) {
     pi.classList.add('visible');
+    const isSmallScreen = window.innerWidth <= 768;
     const isTouchDevice = 'ontouchstart' in window;
-    const instruction = isTouchDevice
-      ? `Placing: ${placementPattern.name} — Tap to stamp, tap button to deselect`
-      : `Placing: ${placementPattern.name} — Click to stamp, ESC or click button to deselect`;
+    const instruction = isSmallScreen
+      ? `${placementPattern.name} — tap to place`
+      : (isTouchDevice
+        ? `Placing: ${placementPattern.name} — Tap to stamp, tap button to deselect`
+        : `Placing: ${placementPattern.name} — Click to stamp, ESC or click button to deselect`);
     pi.textContent = instruction;
   } else {
     pi.classList.remove('visible');

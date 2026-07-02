@@ -196,10 +196,21 @@ canvas.placing {
       transform: none;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 4px 12px;
+      gap: 3px 10px;
       font-size: 10px;
-      padding: 4px 10px;
+      padding: 3px 8px;
       max-width: none;
+    }
+
+    .info-bar .github-link {
+      font-size: 9px;
+    }
+
+    .info-bar .placement-hint.visible {
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
