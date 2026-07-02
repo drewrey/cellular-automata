@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cellular Automata Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  canvas {
+    display: block;
+    cursor: crosshair;
+  }
+
+  canvas.placing {
+    cursor: copy;
+  }
+
+  .toolbar {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(18, 18, 28, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 8px 14px;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .toolbar button, .toolbar select {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .toolbar button:hover, .toolbar select:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .toolbar button.active {
+    background: rgba(100, 180, 255, 0.2);
+    border-color: rgba(100, 180, 255, 0.4);
+    color: #8cc8ff;
+  }
+
+  .toolbar .separator {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .toolbar .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #888;
+  }
+
+  .toolbar input[type="range"] {
+    width: 80px;
+    accent-color: #6ab4ff;
+  }
+
+  .info-bar {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #666;
+    background: rgba(18, 18, 28, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 6px 14px;
+    z-index: 100;
+  }
+
+  .info-bar span { color: #888; }
+  .info-bar .placement-hint { color: #8cc8ff; }
+
+  .patterns-dropdown {
+    display: none;
+    position: fixed;
+    background: rgba(18, 18, 28, 0.96);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    z-index: 150;
+    max-height: 70vh;
+    overflow-y: auto;
+    min-width: 220px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  }
+
+  .patterns-dropdown.open { display: block; }
+
+  .patterns-category { margin-bottom: 14px; }
+  .patterns-category:last-child { margin-bottom: 0; }
+
+  .patterns-category h3 {
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .patterns-category button {
+    display: block;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #ccc;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    margin-bottom: 3px;
+    transition: all 0.15s;
+  }
+
+  .patterns-category button:hover {
+    background: rgba(100, 180, 255, 0.12);
+    border-color: rgba(100, 180, 255, 0.25);
+    color: #fff;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: #14141e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  }
+
+  .modal h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+
+  .modal label {
+    display: block;
+    font-size: 11px;
+    color: #777;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .modal .rule-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .modal .rule-input input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #e0e0e0;
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  .modal .rule-input input:focus {
+    outline: none;
+    border-color: rgba(100, 180, 255, 0.4);
+  }
+
+  .modal .checkboxes {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 20px;
+  }
+
+  .modal .checkboxes .cb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .modal .checkboxes .cb label {
+    margin: 0;
+    font-size: 10px;
+    color: #555;
+  }
+
+  .modal .checkboxes .cb input[type="checkbox"] {
+    width: 26px;
+    height: 26px;
+    accent-color: #6ab4ff;
+    cursor: pointer;
+  }
+
+  .modal .section { margin-bottom: 20px; }
+
+  .modal .section h3 {
+    font-size: 12px;
+    font-weight: 500;
+    color: #999;
+    margin-bottom: 10px;
+  }
+
+  .modal .presets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-bottom: 20px;
+  }
+
+  .modal .presets button {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #ccc;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+
+  .modal .presets button:hover {
+    background: rgba(100, 180, 255, 0.1);
+    border-color: rgba(100, 180, 255, 0.3);
+  }
+
+  .modal .presets button .preset-rule {
+    font-size: 10px;
+    color: #555;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .modal .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .modal .actions button {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.15s;
+  }
+
+  .modal .actions .btn-cancel {
+    background: transparent;
+    color: #888;
+  }
+
+  .modal .actions .btn-apply {
+    background: rgba(100, 180, 255, 0.2);
+    color: #8cc8ff;
+    border-color: rgba(100, 180, 255, 0.3);
+  }
+
+  .modal .actions .btn-apply:hover {
+    background: rgba(100, 180, 255, 0.3);
+  }
+
+  .color-options {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .color-options .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .color-options .color-swatch.active {
+    border-color: #fff;
+    transform: scale(1.15);
+  }
+
+  .visual-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 18px);
+    grid-template-rows: repeat(3, 18px);
+    gap: 1px;
+    margin: 0 auto;
+    width: fit-content;
+  }
+
+  .visual-cell {
+    width: 18px;
+    height: 18px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .visual-cell.neighbor {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .visual-cell.center-birth {
+    background: #6aff8a;
+    border-color: #6aff8a;
+    box-shadow: 0 0 8px rgba(106, 255, 138, 0.4);
+  }
+
+  .visual-cell.center-dead {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .visual-cell.center-survive {
+    background: #6ab4ff;
+    border-color: #6ab4ff;
+    box-shadow: 0 0 8px rgba(106, 180, 255, 0.4);
+  }
+
+  .visual-cell.center-die {
+    background: rgba(255, 100, 100, 0.3);
+    border-color: rgba(255, 100, 100, 0.4);
+  }
+
+  .visual-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 6px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .visual-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .visual-item.active {
+    border-color: rgba(106, 255, 138, 0.3);
+    background: rgba(106, 255, 138, 0.05);
+  }
+
+  .visual-item.active.survival-active {
+    border-color: rgba(106, 180, 255, 0.3);
+    background: rgba(106, 180, 255, 0.05);
+  }
+
+  .visual-item.inactive {
+    opacity: 0.5;
+  }
+
+  .visual-label {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+  }
+
+  .visual-label.active-label {
+    color: #6aff8a;
+    font-weight: 600;
+  }
+
+  .visual-label.survive-label {
+    color: #6ab4ff;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="toolbar">
+  <button id="btn-play" title="Play/Pause (Space)">&#9654; Play</button>
+  <button id="btn-step" title="Step (N)">&#9654;| Step</button>
+  <div class="separator"></div>
+  <button id="btn-clear" title="Clear (C)">Clear</button>
+  <button id="btn-random" title="Randomize (R)">Random</button>
+  <div class="separator"></div>
+  <div class="speed-control">
+    <span>Speed</span>
+    <input type="range" id="speed-slider" min="1" max="60" value="10">
+  </div>
+  <div class="separator"></div>
+  <button id="btn-mode" title="Toggle Paint/Pan Mode (Tab)">&#9998; Paint</button>
+  <button id="btn-patterns" title="Place Patterns">&#9638; Patterns</button>
+  <button id="btn-rules" title="Edit Rules">&#9881; Rules</button>
+  <button id="btn-reset-view" title="Reset View">Reset View</button>
+</div>
+
+<div class="patterns-dropdown" id="patterns-dropdown"></div>
+
+<div class="info-bar">
+  <span>Gen: <span id="info-gen">0</span></span>
+  <span>Pop: <span id="info-pop">0</span></span>
+  <span>Rule: <span id="info-rule">B3/S23</span></span>
+  <span>Zoom: <span id="info-zoom">100%</span></span>
+  <span id="placement-info" class="placement-hint" style="display:none"></span>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2>Rule Configuration</h2>
+
+    <div class="section">
+      <label>Presets</label>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="section">
+      <label>Rule String (B/S notation)</label>
+      <div class="rule-input">
+        <input type="text" id="rule-string" placeholder="B3/S23" value="B3/S23">
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 style="color: #6aff8a;">Birth (B) — Click to toggle</h3>
+      <div id="birth-visuals" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;"></div>
+    </div>
+
+    <div class="section">
+      <h3 style="color: #6ab4ff;">Survival (S) — Click to toggle</h3>
+      <div id="survival-visuals" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;"></div>
+    </div>
+
+    <div class="section">
+      <label>Cell Color</label>
+      <div class="color-options" id="color-options"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-cancel" id="btn-modal-cancel">Cancel</button>
+      <button class="btn-apply" id="btn-modal-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const PRESETS = [
+  { name: "Conway's Life", rule: "B3/S23" },
+  { name: "HighLife", rule: "B36/S23" },
+  { name: "Seeds", rule: "B2/S" },
+  { name: "Day & Night", rule: "B3678/S34678" },
+  { name: "Replicator", rule: "B1357/S1357" },
+  { name: "Maze", rule: "B3/S12345" },
+  { name: "Coral", rule: "B3/S01234" },
+  { name: "Anneal", rule: "B4678/S35678" },
+  { name: "2x2", rule: "B36/S125" },
+  { name: "Diamoeba", rule: "B35678/S5678" },
+  { name: "Mazectric", rule: "B3/S1234" },
+  { name: "Life w/o Death", rule: "B3/S012345678" },
+];
+
+const PATTERNS = [
+  {
+    name: "Block", category: "Still Lifes",
+    rows: ["##", "##"]
+  },
+  {
+    name: "Beehive", category: "Still Lifes",
+    rows: [".##.", "#..#", ".##."]
+  },
+  {
+    name: "Blinker", category: "Oscillators",
+    rows: ["###"]
+  },
+  {
+    name: "Toad", category: "Oscillators",
+    rows: [".###", "###."]
+  },
+  {
+    name: "Pulsar", category: "Oscillators",
+    rows: [
+      "..###...###..",
+      ".............",
+      "#....#.#....#",
+      "#....#.#....#",
+      "#....#.#....#",
+      "..###...###..",
+      ".............",
+      "..###...###..",
+      "#....#.#....#",
+      "#....#.#....#",
+      "#....#.#....#",
+      ".............",
+      "..###...###.."
+    ]
+  },
+  {
+    name: "Glider", category: "Spaceships",
+    rows: [".#.", "..#", "###"]
+  },
+  {
+    name: "R-pentomino", category: "Methuselahs",
+    rows: [".##", "##.", ".#."]
+  },
+  {
+    name: "Acorn", category: "Methuselahs",
+    rows: [".#.....", "...#...", "##.###."]
+  }
+];
+
+const COLORS = [
+  { name: "Cyan", bg: "#0a0a0f", cell: "#6ab4ff", glow: "rgba(106,180,255,0.15)" },
+  { name: "Green", bg: "#0a0f0a", cell: "#6aff8a", glow: "rgba(106,255,138,0.15)" },
+  { name: "Amber", bg: "#0f0d0a", cell: "#ffc46a", glow: "rgba(255,196,106,0.15)" },
+  { name: "Pink", bg: "#0f0a0f", cell: "#ff6acc", glow: "rgba(255,106,204,0.15)" },
+  { name: "White", bg: "#0a0a0f", cell: "#e8e8e8", glow: "rgba(232,232,232,0.1)" },
+];
+
+function parsePatternRows(rows) {
+  const cells = [];
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === '#' || row[x] === 'X') cells.push([x, y]);
+    }
+  });
+  return cells;
+}
+
+function patternBounds(cells) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [x, y] of cells) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  return { minX, minY, maxX, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+let state = {
+  cells: new Set(),
+  birth: new Set([3]),
+  survival: new Set([2, 3]),
+  generation: 0,
+  running: false,
+  speed: 10,
+  cellSize: 16,
+  offsetX: 0,
+  offsetY: 0,
+  colorIdx: 0,
+};
+
+let modalBirth = new Set([3]);
+let modalSurvival = new Set([2, 3]);
+
+let lastStepTime = 0;
+let animFrameId = null;
+let interactionMode = 'paint';
+let isPanning = false;
+let panStart = null;
+let panOffsetStart = null;
+let mouseDown = false;
+let paintMode = null;
+let placementPattern = null;
+let selectedPatternDef = null;
+let mouseGridX = 0;
+let mouseGridY = 0;
+let mouseScreenX = 0;
+let mouseScreenY = 0;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  render();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function cellKey(x, y) { return `${x},${y}`; }
+
+function parseKey(key) {
+  const [x, y] = key.split(',').map(Number);
+  return [x, y];
+}
+
+function screenToCell(sx, sy) {
+  return [
+    Math.floor((sx - state.offsetX) / state.cellSize),
+    Math.floor((sy - state.offsetY) / state.cellSize)
+  ];
+}
+
+function getNeighbors(x, y) {
+  const neighbors = [];
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      neighbors.push([x + dx, y + dy]);
+    }
+  }
+  return neighbors;
+}
+
+function countNeighbors(x, y) {
+  let count = 0;
+  for (const [nx, ny] of getNeighbors(x, y)) {
+    if (state.cells.has(cellKey(nx, ny))) count++;
+  }
+  return count;
+}
+
+function step() {
+  const next = new Set();
+  const checked = new Set();
+
+  for (const key of state.cells) {
+    const [x, y] = parseKey(key);
+    const n = countNeighbors(x, y);
+    if (state.survival.has(n)) next.add(key);
+    for (const [nx, ny] of getNeighbors(x, y)) {
+      const nk = cellKey(nx, ny);
+      if (!checked.has(nk)) {
+        checked.add(nk);
+        if (!state.cells.has(nk)) {
+          if (state.birth.has(countNeighbors(nx, ny))) next.add(nk);
+        }
+      }
+    }
+  }
+
+  state.cells = next;
+  state.generation++;
+}
+
+function render() {
+  const colors = COLORS[state.colorIdx];
+  ctx.fillStyle = colors.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const cs = state.cellSize;
+  const startX = Math.floor(-state.offsetX / cs);
+  const startY = Math.floor(-state.offsetY / cs);
+  const endX = Math.ceil((canvas.width - state.offsetX) / cs);
+  const endY = Math.ceil((canvas.height - state.offsetY) / cs);
+
+  if (cs >= 4) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let x = startX; x <= endX; x++) {
+      const sx = x * cs + state.offsetX;
+      ctx.moveTo(sx, 0);
+      ctx.lineTo(sx, canvas.height);
+    }
+    for (let y = startY; y <= endY; y++) {
+      const sy = y * cs + state.offsetY;
+      ctx.moveTo(0, sy);
+      ctx.lineTo(canvas.width, sy);
+    }
+    ctx.stroke();
+  }
+
+  if (cs >= 8) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const ox = state.offsetX;
+    const oy = state.offsetY;
+    if (ox >= 0 && ox <= canvas.width) {
+      ctx.moveTo(ox, 0);
+      ctx.lineTo(ox, canvas.height);
+    }
+    if (oy >= 0 && oy <= canvas.height) {
+      ctx.moveTo(0, oy);
+      ctx.lineTo(canvas.width, oy);
+    }
+    ctx.stroke();
+  }
+
+  for (const key of state.cells) {
+    const [x, y] = parseKey(key);
+    const sx = x * cs + state.offsetX;
+    const sy = y * cs + state.offsetY;
+    if (sx + cs < 0 || sx > canvas.width || sy + cs < 0 || sy > canvas.height) continue;
+
+    if (cs >= 6) {
+      ctx.fillStyle = colors.glow;
+      ctx.fillRect(sx - 1, sy - 1, cs + 2, cs + 2);
+    }
+    ctx.fillStyle = colors.cell;
+    ctx.fillRect(sx + 0.5, sy + 0.5, cs - 1, cs - 1);
+  }
+
+  if (placementPattern) {
+    const cells = placementPattern.cells;
+    const bounds = placementPattern.bounds;
+    const ox = mouseGridX - Math.floor(bounds.w / 2);
+    const oy = mouseGridY - Math.floor(bounds.h / 2);
+
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = colors.cell;
+    for (const [px, py] of cells) {
+      const sx = (px + ox) * cs + state.offsetX;
+      const sy = (py + oy) * cs + state.offsetY;
+      ctx.fillRect(sx + 0.5, sy + 0.5, cs - 1, cs - 1);
+    }
+    ctx.globalAlpha = 1.0;
+
+    const bx = (ox) * cs + state.offsetX;
+    const by = (oy) * cs + state.offsetY;
+    ctx.strokeStyle = 'rgba(138,200,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(bx, by, bounds.w * cs, bounds.h * cs);
+    ctx.setLineDash([]);
+  }
+
+  updateInfo();
+}
+
+function updateInfo() {
+  document.getElementById('info-gen').textContent = state.generation;
+  document.getElementById('info-pop').textContent = state.cells.size;
+  document.getElementById('info-rule').textContent = ruleString();
+  document.getElementById('info-zoom').textContent = Math.round(state.cellSize / 16 * 100) + '%';
+
+  const pi = document.getElementById('placement-info');
+  if (placementPattern) {
+    pi.style.display = 'inline';
+    pi.textContent = `Placing: ${placementPattern.name} — Click to stamp, ESC or click button to deselect`;
+  } else {
+    pi.style.display = 'none';
+  }
+}
+
+function ruleString() {
+  const b = [...state.birth].sort().join('');
+  const s = [...state.survival].sort().join('');
+  return `B${b}/S${s}`;
+}
+
+function parseRule(str) {
+  const match = str.match(/B([0-8]*)\/S([0-8]*)/i);
+  if (!match) return null;
+  return {
+    birth: new Set([...match[1]].map(Number)),
+    survival: new Set([...match[2]].map(Number))
+  };
+}
+
+function loop(timestamp) {
+  animFrameId = requestAnimationFrame(loop);
+  if (!state.running) return;
+  const interval = 1000 / state.speed;
+  if (timestamp - lastStepTime >= interval) {
+    step();
+    render();
+    lastStepTime = timestamp;
+  }
+}
+animFrameId = requestAnimationFrame(loop);
+
+function enterPlacementMode(patternDef) {
+  if (selectedPatternDef && selectedPatternDef.name === patternDef.name) {
+    exitPlacementMode();
+    return;
+  }
+
+  const cells = parsePatternRows(patternDef.rows);
+  if (cells.length === 0) return;
+  const bounds = patternBounds(cells);
+  const normalized = cells.map(([x, y]) => [x - bounds.minX, y - bounds.minY]);
+  selectedPatternDef = patternDef;
+  placementPattern = {
+    name: patternDef.name,
+    cells: normalized,
+    bounds: { w: bounds.w, h: bounds.h }
+  };
+  canvas.classList.add('placing');
+  canvas.style.cursor = 'copy';
+  closePatternsDropdown();
+  updatePatternsButton();
+  render();
+}
+
+function exitPlacementMode() {
+  placementPattern = null;
+  selectedPatternDef = null;
+  canvas.classList.remove('placing');
+  if (interactionMode === 'pan') {
+    canvas.style.cursor = 'grab';
+  } else {
+    canvas.style.cursor = 'crosshair';
+  }
+  updatePatternsButton();
+  render();
+}
+
+function placePatternAtMouse() {
+  if (!placementPattern) return;
+  const cells = placementPattern.cells;
+  const bounds = placementPattern.bounds;
+  const ox = mouseGridX - Math.floor(bounds.w / 2);
+  const oy = mouseGridY - Math.floor(bounds.h / 2);
+  for (const [px, py] of cells) {
+    state.cells.add(cellKey(px + ox, py + oy));
+  }
+  render();
+}
+
+function updatePatternsButton() {
+  const btn = document.getElementById('btn-patterns');
+  if (selectedPatternDef) {
+    btn.innerHTML = `&#9638; ${selectedPatternDef.name} <span style="opacity:0.5;font-size:11px;">✕</span>`;
+    btn.classList.add('active');
+  } else {
+    btn.innerHTML = '&#9638; Patterns';
+    btn.classList.remove('active');
+  }
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 1) {
+    isPanning = true;
+    panStart = { x: e.clientX, y: e.clientY };
+    panOffsetStart = { x: state.offsetX, y: state.offsetY };
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  if (e.button === 0) {
+    if (placementPattern) {
+      placePatternAtMouse();
+      return;
+    }
+
+    if (interactionMode === 'pan') {
+      isPanning = true;
+      panStart = { x: e.clientX, y: e.clientY };
+      panOffsetStart = { x: state.offsetX, y: state.offsetY };
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+
+    mouseDown = true;
+    const [cx, cy] = screenToCell(e.clientX, e.clientY);
+    const key = cellKey(cx, cy);
+    if (state.cells.has(key)) {
+      paintMode = 'erase';
+      state.cells.delete(key);
+    } else {
+      paintMode = 'paint';
+      state.cells.add(key);
+    }
+    render();
+  }
+
+  if (e.button === 2 && placementPattern) {
+    exitPlacementMode();
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  mouseScreenX = e.clientX;
+  mouseScreenY = e.clientY;
+  const [gx, gy] = screenToCell(e.clientX, e.clientY);
+  mouseGridX = gx;
+  mouseGridY = gy;
+
+  if (isPanning) {
+    state.offsetX = panOffsetStart.x + (e.clientX - panStart.x);
+    state.offsetY = panOffsetStart.y + (e.clientY - panStart.y);
+    render();
+    return;
+  }
+
+  if (placementPattern) {
+    render();
+    return;
+  }
+
+  if (interactionMode === 'pan') return;
+
+  if (mouseDown) {
+    const key = cellKey(gx, gy);
+    if (paintMode === 'paint') state.cells.add(key);
+    else state.cells.delete(key);
+    render();
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  isPanning = false;
+  mouseDown = false;
+  paintMode = null;
+  if (placementPattern) {
+    canvas.style.cursor = 'copy';
+  } else if (interactionMode === 'pan') {
+    canvas.style.cursor = 'grab';
+  } else {
+    canvas.style.cursor = 'crosshair';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  isPanning = false;
+  mouseDown = false;
+  paintMode = null;
+  if (placementPattern) {
+    canvas.style.cursor = 'copy';
+  } else if (interactionMode === 'pan') {
+    canvas.style.cursor = 'grab';
+  } else {
+    canvas.style.cursor = 'crosshair';
+  }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (placementPattern) exitPlacementMode();
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  const mx = e.clientX;
+  const my = e.clientY;
+  const newCellSize = Math.max(2, Math.min(80, state.cellSize * zoomFactor));
+  const ratio = newCellSize / state.cellSize;
+  state.offsetX = mx - (mx - state.offsetX) * ratio;
+  state.offsetY = my - (my - state.offsetY) * ratio;
+  state.cellSize = newCellSize;
+  render();
+}, { passive: false });
+
+document.getElementById('btn-play').addEventListener('click', togglePlay);
+document.getElementById('btn-step').addEventListener('click', () => { step(); render(); });
+document.getElementById('btn-clear').addEventListener('click', () => {
+  state.cells.clear();
+  state.generation = 0;
+  render();
+});
+document.getElementById('btn-random').addEventListener('click', () => {
+  state.cells.clear();
+  state.generation = 0;
+  const [sx, sy] = screenToCell(0, 0);
+  const [ex, ey] = screenToCell(canvas.width, canvas.height);
+  for (let x = sx; x <= ex; x++) {
+    for (let y = sy; y <= ey; y++) {
+      if (Math.random() < 0.3) state.cells.add(cellKey(x, y));
+    }
+  }
+  render();
+});
+document.getElementById('btn-rules').addEventListener('click', openModal);
+document.getElementById('btn-patterns').addEventListener('click', (e) => {
+  if (selectedPatternDef) {
+    exitPlacementMode();
+  } else {
+    togglePatternsDropdown();
+  }
+});
+document.getElementById('btn-mode').addEventListener('click', toggleInteractionMode);
+document.getElementById('btn-reset-view').addEventListener('click', () => {
+  state.cellSize = 16;
+  state.offsetX = canvas.width / 2;
+  state.offsetY = canvas.height / 2;
+  render();
+});
+
+document.getElementById('speed-slider').addEventListener('input', (e) => {
+  state.speed = parseInt(e.target.value);
+});
+
+function togglePlay() {
+  state.running = !state.running;
+  const btn = document.getElementById('btn-play');
+  if (state.running) {
+    btn.innerHTML = '&#9646;&#9646; Pause';
+    btn.classList.add('active');
+  } else {
+    btn.innerHTML = '&#9654; Play';
+    btn.classList.remove('active');
+  }
+}
+
+function toggleInteractionMode() {
+  interactionMode = interactionMode === 'paint' ? 'pan' : 'paint';
+  const btn = document.getElementById('btn-mode');
+  if (interactionMode === 'pan') {
+    btn.innerHTML = '&#9995; Pan';
+    btn.classList.add('active');
+    canvas.style.cursor = 'grab';
+  } else {
+    btn.innerHTML = '&#9998; Paint';
+    btn.classList.remove('active');
+    canvas.style.cursor = placementPattern ? 'copy' : 'crosshair';
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape') {
+    if (placementPattern) { exitPlacementMode(); return; }
+    if (document.getElementById('modal-overlay').classList.contains('open')) { closeModal(); return; }
+    const dd = document.getElementById('patterns-dropdown');
+    if (dd.classList.contains('open')) { closePatternsDropdown(); return; }
+  }
+
+  if (document.getElementById('modal-overlay').classList.contains('open')) return;
+  if (e.target.tagName === 'INPUT') return;
+
+  switch (e.code) {
+    case 'Space': e.preventDefault(); togglePlay(); break;
+    case 'Tab': e.preventDefault(); toggleInteractionMode(); break;
+    case 'KeyN': step(); render(); break;
+    case 'KeyC': state.cells.clear(); state.generation = 0; render(); break;
+    case 'KeyR': document.getElementById('btn-random').click(); break;
+  }
+});
+
+function buildPatternsDropdown() {
+  const container = document.getElementById('patterns-dropdown');
+  container.innerHTML = '';
+
+  const categories = {};
+  PATTERNS.forEach(p => {
+    if (!categories[p.category]) categories[p.category] = [];
+    categories[p.category].push(p);
+  });
+
+  for (const [cat, patterns] of Object.entries(categories)) {
+    const section = document.createElement('div');
+    section.className = 'patterns-category';
+    section.innerHTML = `<h3>${cat}</h3>`;
+    patterns.forEach(p => {
+      const btn = document.createElement('button');
+      btn.textContent = p.name;
+      btn.dataset.patternName = p.name;
+      btn.addEventListener('click', () => enterPlacementMode(p));
+      section.appendChild(btn);
+    });
+    container.appendChild(section);
+  }
+  updatePatternsDropdownHighlight();
+}
+
+function updatePatternsDropdownHighlight() {
+  const buttons = document.querySelectorAll('#patterns-dropdown button');
+  buttons.forEach(btn => {
+    if (selectedPatternDef && btn.dataset.patternName === selectedPatternDef.name) {
+      btn.style.background = 'rgba(100, 180, 255, 0.2)';
+      btn.style.borderColor = 'rgba(100, 180, 255, 0.4)';
+    } else {
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }
+  });
+}
+
+function togglePatternsDropdown() {
+  const dd = document.getElementById('patterns-dropdown');
+  const btn = document.getElementById('btn-patterns');
+  if (dd.classList.contains('open')) {
+    closePatternsDropdown();
+  } else {
+    updatePatternsDropdownHighlight();
+    const rect = btn.getBoundingClientRect();
+    dd.style.top = (rect.bottom + 8) + 'px';
+    dd.style.left = rect.left + 'px';
+    dd.classList.add('open');
+  }
+}
+
+function closePatternsDropdown() {
+  const dd = document.getElementById('patterns-dropdown');
+  dd.classList.remove('open');
+  document.getElementById('btn-patterns').classList.remove('active');
+}
+
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('patterns-dropdown');
+  const btn = document.getElementById('btn-patterns');
+  if (dd.classList.contains('open') && !dd.contains(e.target) && !btn.contains(e.target)) {
+    closePatternsDropdown();
+  }
+});
+
+function openModal() {
+  modalBirth = new Set(state.birth);
+  modalSurvival = new Set(state.survival);
+
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('open');
+
+  document.getElementById('rule-string').value = ruleString();
+  buildVisualGrids();
+  buildModalPresets();
+  buildModalColors();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function buildVisualGrids() {
+  const birthContainer = document.getElementById('birth-visuals');
+  const survivalContainer = document.getElementById('survival-visuals');
+  birthContainer.innerHTML = '';
+  survivalContainer.innerHTML = '';
+
+  const neighborPositions = [
+    [0, 0], [1, 0], [2, 0],
+    [0, 1],         [2, 1],
+    [0, 2], [1, 2], [2, 2]
+  ];
+
+  for (let n = 0; n <= 8; n++) {
+    const isBirth = modalBirth.has(n);
+    const isSurvival = modalSurvival.has(n);
+
+    const birthItem = createVisualItem(n, 'birth', isBirth, neighborPositions);
+    birthContainer.appendChild(birthItem);
+
+    const survivalItem = createVisualItem(n, 'survival', isSurvival, neighborPositions);
+    survivalContainer.appendChild(survivalItem);
+  }
+}
+
+function createVisualItem(n, type, isActive, neighborPositions) {
+  const item = document.createElement('div');
+  item.className = 'visual-item ' + (isActive ? 'active' : 'inactive');
+  if (type === 'survival' && isActive) {
+    item.classList.add('survival-active');
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'visual-grid';
+
+  const selectedNeighbors = neighborPositions.slice(0, n);
+
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'visual-cell';
+
+      const isCenter = row === 1 && col === 1;
+      const isNeighbor = selectedNeighbors.some(([r, c]) => r === row && c === col);
+
+      if (isCenter) {
+        if (type === 'birth') {
+          cell.classList.add(isActive ? 'center-birth' : 'center-dead');
+        } else {
+          cell.classList.add(isActive ? 'center-survive' : 'center-die');
+        }
+      } else if (isNeighbor) {
+        cell.classList.add('neighbor');
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  const label = document.createElement('div');
+  label.className = 'visual-label';
+  if (isActive) {
+    label.classList.add(type === 'birth' ? 'active-label' : 'survive-label');
+    if (type === 'birth') {
+      label.textContent = `${n} neighbor${n !== 1 ? 's' : ''} → Birth`;
+    } else {
+      label.textContent = `${n} neighbor${n !== 1 ? 's' : ''} → Survive`;
+    }
+  } else {
+    label.textContent = `${n} neighbor${n !== 1 ? 's' : ''} → Nothing`;
+  }
+
+  item.appendChild(grid);
+  item.appendChild(label);
+
+  item.addEventListener('click', () => {
+    if (type === 'birth') {
+      if (modalBirth.has(n)) {
+        modalBirth.delete(n);
+      } else {
+        modalBirth.add(n);
+      }
+    } else {
+      if (modalSurvival.has(n)) {
+        modalSurvival.delete(n);
+      } else {
+        modalSurvival.add(n);
+      }
+    }
+    const bStr = [...modalBirth].sort().join('');
+    const sStr = [...modalSurvival].sort().join('');
+    document.getElementById('rule-string').value = `B${bStr}/S${sStr}`;
+    buildVisualGrids();
+  });
+
+  return item;
+}
+
+function buildModalPresets() {
+  const container = document.getElementById('presets');
+  container.innerHTML = '';
+  PRESETS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.innerHTML = `${p.name}<span class="preset-rule">${p.rule}</span>`;
+    btn.addEventListener('click', () => {
+      const parsed = parseRule(p.rule);
+      if (parsed) {
+        modalBirth = parsed.birth;
+        modalSurvival = parsed.survival;
+        document.getElementById('rule-string').value = p.rule;
+        buildVisualGrids();
+      }
+    });
+    container.appendChild(btn);
+  });
+}
+
+function buildModalColors() {
+  const container = document.getElementById('color-options');
+  container.innerHTML = '';
+  COLORS.forEach((c, i) => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch' + (i === state.colorIdx ? ' active' : '');
+    swatch.style.background = c.cell;
+    swatch.title = c.name;
+    swatch.addEventListener('click', () => {
+      state.colorIdx = i;
+      container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      render();
+    });
+    container.appendChild(swatch);
+  });
+}
+
+document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+
+document.getElementById('btn-modal-apply').addEventListener('click', () => {
+  const input = document.getElementById('rule-string').value.trim();
+  const parsed = parseRule(input);
+  if (parsed) {
+    state.birth = parsed.birth;
+    state.survival = parsed.survival;
+  }
+  closeModal();
+  render();
+});
+
+document.getElementById('rule-string').addEventListener('input', () => {
+  const val = document.getElementById('rule-string').value.trim();
+  const parsed = parseRule(val);
+  if (parsed) {
+    modalBirth = parsed.birth;
+    modalSurvival = parsed.survival;
+    buildVisualGrids();
+  }
+});
+
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+buildPatternsDropdown();
+
+state.offsetX = canvas.width / 2;
+state.offsetY = canvas.height / 2;
+render();
+</script>
+</body>
+</html>
