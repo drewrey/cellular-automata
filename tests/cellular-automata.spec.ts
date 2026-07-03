@@ -277,7 +277,7 @@ test.describe('Cellular Automata', () => {
 
   test('Discover button is hidden in production mode', async ({ page }) => {
     await page.evaluate(() => {
-      _devMode = false;
+      DEV_MODE = false;
       window.applyDevModeVisibility();
     });
     await page.locator('#btn-toggle-more').click();

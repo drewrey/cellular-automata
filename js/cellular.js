@@ -3,6 +3,15 @@ const ctx = canvas.getContext('2d');
 
 const CHUNK_SIZE = 32;
 
+let DEV_MODE = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || new URLSearchParams(location.search).has('dev');
+
+function isDevMode() { return DEV_MODE; }
+
+function applyDevModeVisibility() {
+  const btn = document.getElementById('btn-discover');
+  if (btn) btn.style.display = isDevMode() ? '' : 'none';
+}
+
 const PRESETS = [
   { name: "Conway's Life", rule: "B3/S23" },
   { name: "HighLife", rule: "B36/S23" },
@@ -1616,15 +1625,6 @@ document.getElementById('btn-share').addEventListener('click', () => {
 });
 
 // Learner (pattern discovery)
-let _devMode = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || new URLSearchParams(location.search).has('dev');
-
-function isDevMode() { return _devMode; }
-
-function applyDevModeVisibility() {
-  const btn = document.getElementById('btn-discover');
-  if (btn) btn.style.display = isDevMode() ? '' : 'none';
-}
-
 let learnerWorker = null;
 let isLearning = false;
 let discoveredMap = new Map();
