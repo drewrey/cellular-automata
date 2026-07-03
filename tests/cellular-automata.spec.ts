@@ -206,6 +206,22 @@ test.describe('Cellular Automata', () => {
     expect(pop).toBe(5);
   });
 
+  test('Redo stack is capped at 50 entries', async ({ page }) => {
+    await page.evaluate(() => {
+      for (let i = 0; i < 60; i++) window.saveUndoState();
+    });
+
+    const undoLen = await page.evaluate(() => state.undoStack.length);
+    expect(undoLen).toBe(50);
+
+    for (let i = 0; i < 50; i++) {
+      await page.evaluate(() => window.undo());
+    }
+
+    const redoLen = await page.evaluate(() => state.redoStack.length);
+    expect(redoLen).toBeLessThanOrEqual(50);
+  });
+
   test('9. Pattern discovery finds objects from random soups', async ({ page }) => {
     // Expand secondary toolbar to access Discover button
     await page.locator('#btn-toggle-more').click();

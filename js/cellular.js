@@ -411,6 +411,7 @@ function updateUndoButtons() {
 function undo() {
   if (state.undoStack.length === 0) return;
   state.redoStack.push(new Set(state.cells));
+  if (state.redoStack.length > 50) state.redoStack.shift();
   state.cells = state.undoStack.pop();
   rebuildChunks();
   updateUndoButtons();
