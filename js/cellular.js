@@ -1356,9 +1356,14 @@ function renderRecentColorPresets(container) {
   });
 }
 
+let _colorPickerAbortController = null;
+
 function buildColorDropdown() {
   const container = document.getElementById('color-dropdown');
   container.innerHTML = '';
+
+  if (_colorPickerAbortController) _colorPickerAbortController.abort();
+  _colorPickerAbortController = new AbortController();
 
   const wheelContainer = document.createElement('div');
   wheelContainer.className = 'color-wheel-container';
@@ -1482,7 +1487,7 @@ function buildColorDropdown() {
   document.addEventListener('mouseup', () => {
     if (isDragging) persistDragColor();
     isDragging = false;
-  });
+  }, { signal: _colorPickerAbortController.signal });
 
   container.appendChild(wheelContainer);
   renderRecentColorPresets(container);
@@ -1508,6 +1513,10 @@ function closeColorDropdown() {
   const dd = document.getElementById('color-dropdown');
   dd.classList.remove('open');
   document.getElementById('btn-color').classList.remove('active');
+  if (_colorPickerAbortController) {
+    _colorPickerAbortController.abort();
+    _colorPickerAbortController = null;
+  }
 }
 
 function updateColorButton(hex) {

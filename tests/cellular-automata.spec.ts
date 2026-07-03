@@ -222,6 +222,26 @@ test.describe('Cellular Automata', () => {
     expect(redoLen).toBeLessThanOrEqual(50);
   });
 
+  test('Color picker opens and closes repeatedly without breaking', async ({ page }) => {
+    await page.locator('#btn-toggle-more').click();
+    const btn = page.locator('#btn-color');
+    const dd = page.locator('#color-dropdown');
+
+    for (let i = 0; i < 3; i++) {
+      await btn.click();
+      await expect(dd).toBeVisible();
+      await page.mouse.click(10, 10);
+      await expect(dd).not.toBeVisible();
+    }
+
+    await btn.click();
+    await expect(dd).toBeVisible();
+    const wheel = dd.locator('.color-wheel');
+    await expect(wheel).toBeVisible();
+    const box = await wheel.boundingBox();
+    expect(box).not.toBeNull();
+  });
+
   test('9. Pattern discovery finds objects from random soups', async ({ page }) => {
     // Expand secondary toolbar to access Discover button
     await page.locator('#btn-toggle-more').click();
