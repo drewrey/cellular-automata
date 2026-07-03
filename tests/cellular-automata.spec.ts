@@ -269,6 +269,22 @@ test.describe('Cellular Automata', () => {
     expect(len).toBeLessThanOrEqual(100);
   });
 
+  test('Discover button is visible in dev mode (localhost)', async ({ page }) => {
+    await page.locator('#btn-toggle-more').click();
+    const btn = page.locator('#btn-discover');
+    await expect(btn).toBeVisible();
+  });
+
+  test('Discover button is hidden in production mode', async ({ page }) => {
+    await page.evaluate(() => {
+      _devMode = false;
+      window.applyDevModeVisibility();
+    });
+    await page.locator('#btn-toggle-more').click();
+    const btn = page.locator('#btn-discover');
+    await expect(btn).not.toBeVisible();
+  });
+
   test('9. Pattern discovery finds objects from random soups', async ({ page }) => {
     // Expand secondary toolbar to access Discover button
     await page.locator('#btn-toggle-more').click();

@@ -1616,6 +1616,15 @@ document.getElementById('btn-share').addEventListener('click', () => {
 });
 
 // Learner (pattern discovery)
+let _devMode = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || new URLSearchParams(location.search).has('dev');
+
+function isDevMode() { return _devMode; }
+
+function applyDevModeVisibility() {
+  const btn = document.getElementById('btn-discover');
+  if (btn) btn.style.display = isDevMode() ? '' : 'none';
+}
+
 let learnerWorker = null;
 let isLearning = false;
 let discoveredMap = new Map();
@@ -1835,7 +1844,8 @@ function addDiscoveredPattern(entry) {
     if (idx === -1) break;
     PATTERNS.splice(idx, 1);
   }
-  buildPatternsDropdown();
+buildPatternsDropdown();
+applyDevModeVisibility();
   closeDiscoverPanel();
   enterPlacementMode(def);
   showToast('Pattern added! Place it on the grid.');
