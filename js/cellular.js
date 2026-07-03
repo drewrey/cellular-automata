@@ -1620,6 +1620,31 @@ let learnerWorker = null;
 let isLearning = false;
 let discoveredMap = new Map();
 let soupsSearched = 0;
+const MAX_DISCOVERED = 500;
+
+function handleDiscoveryMessage(msg) {
+  if (msg.type !== 'discovery') return;
+  const entry = discoveredMap.get(msg.hash);
+  if (entry) {
+    entry.count++;
+  } else {
+    const raw = msg.cells;
+    const minX = Math.min(...raw.map(p => p[0]));
+    const minY = Math.min(...raw.map(p => p[1]));
+    const normalized = raw.map(([x, y]) => [x - minX, y - minY]);
+    discoveredMap.set(msg.hash, { hash: msg.hash, cells: normalized, count: 1, pop: msg.pop });
+    if (discoveredMap.size > MAX_DISCOVERED) {
+      let lowestKey = null;
+      let lowestCount = Infinity;
+      for (const [k, v] of discoveredMap) {
+        if (v.count < lowestCount) { lowestCount = v.count; lowestKey = k; }
+      }
+      if (lowestKey !== null) discoveredMap.delete(lowestKey);
+    }
+  }
+  soupsSearched++;
+  scheduleDiscoverPanelUpdate();
+}
 
 function startLearning() {
   if (learnerWorker) stopLearning();
@@ -1629,21 +1654,7 @@ function startLearning() {
   learnerWorker = new Worker('js/learner.js');
 
   learnerWorker.onmessage = function (e) {
-    const msg = e.data;
-    if (msg.type === 'discovery') {
-      const entry = discoveredMap.get(msg.hash);
-      if (entry) {
-        entry.count++;
-      } else {
-        const raw = msg.cells;
-        const minX = Math.min(...raw.map(p => p[0]));
-        const minY = Math.min(...raw.map(p => p[1]));
-        const normalized = raw.map(([x, y]) => [x - minX, y - minY]);
-        discoveredMap.set(msg.hash, { hash: msg.hash, cells: normalized, count: 1, pop: msg.pop });
-      }
-      soupsSearched++;
-      scheduleDiscoverPanelUpdate();
-    }
+    handleDiscoveryMessage(e.data);
   };
 
   learnerWorker.postMessage({

@@ -242,6 +242,22 @@ test.describe('Cellular Automata', () => {
     expect(box).not.toBeNull();
   });
 
+  test('Discovered map is capped at 500 entries', async ({ page }) => {
+    await page.evaluate(() => {
+      for (let i = 0; i < 600; i++) {
+        window.handleDiscoveryMessage({
+          type: 'discovery',
+          hash: 'h' + i,
+          cells: [[i, 0]],
+          pop: 1,
+        });
+      }
+    });
+
+    const size = await page.evaluate(() => discoveredMap.size);
+    expect(size).toBeLessThanOrEqual(500);
+  });
+
   test('9. Pattern discovery finds objects from random soups', async ({ page }) => {
     // Expand secondary toolbar to access Discover button
     await page.locator('#btn-toggle-more').click();
