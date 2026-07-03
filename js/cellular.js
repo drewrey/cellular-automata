@@ -1621,6 +1621,7 @@ let isLearning = false;
 let discoveredMap = new Map();
 let soupsSearched = 0;
 const MAX_DISCOVERED = 500;
+const MAX_PATTERNS = 100;
 
 function handleDiscoveryMessage(msg) {
   if (msg.type !== 'discovery') return;
@@ -1829,6 +1830,11 @@ function addDiscoveredPattern(entry) {
     rows: cellsToRows(entry.cells)
   };
   PATTERNS.push(def);
+  while (PATTERNS.length > MAX_PATTERNS) {
+    const idx = PATTERNS.findIndex(p => p.category === 'Discovered');
+    if (idx === -1) break;
+    PATTERNS.splice(idx, 1);
+  }
   buildPatternsDropdown();
   closeDiscoverPanel();
   enterPlacementMode(def);
