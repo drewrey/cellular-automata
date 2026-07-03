@@ -1558,6 +1558,10 @@ document.getElementById('btn-modal-apply').addEventListener('click', () => {
   if (parsed) {
     state.birth = parsed.birth;
     state.survival = parsed.survival;
+    if (isLearning) {
+      stopLearning();
+      startLearning();
+    }
   }
   closeModal();
   render();
@@ -1599,6 +1603,225 @@ document.getElementById('btn-share').addEventListener('click', () => {
   }).catch(() => {
     showToast('Failed to copy link');
   });
+});
+
+// Learner (pattern discovery)
+let learnerWorker = null;
+let isLearning = false;
+let discoveredMap = new Map();
+let soupsSearched = 0;
+
+function startLearning() {
+  if (learnerWorker) stopLearning();
+  discoveredMap.clear();
+  soupsSearched = 0;
+
+  learnerWorker = new Worker('js/learner.js');
+
+  learnerWorker.onmessage = function (e) {
+    const msg = e.data;
+    if (msg.type === 'discovery') {
+      const entry = discoveredMap.get(msg.hash);
+      if (entry) {
+        entry.count++;
+      } else {
+        const raw = msg.cells;
+        const minX = Math.min(...raw.map(p => p[0]));
+        const minY = Math.min(...raw.map(p => p[1]));
+        const normalized = raw.map(([x, y]) => [x - minX, y - minY]);
+        discoveredMap.set(msg.hash, { hash: msg.hash, cells: normalized, count: 1, pop: msg.pop });
+      }
+      soupsSearched++;
+      scheduleDiscoverPanelUpdate();
+    }
+  };
+
+  learnerWorker.postMessage({
+    type: 'start',
+    birth: [...state.birth],
+    survival: [...state.survival]
+  });
+
+  isLearning = true;
+  updateDiscoverButton();
+  openDiscoverPanel();
+}
+
+function stopLearning() {
+  if (learnerWorker) {
+    learnerWorker.postMessage({ type: 'stop' });
+    learnerWorker.terminate();
+    learnerWorker = null;
+  }
+  isLearning = false;
+  updateDiscoverButton();
+}
+
+function toggleLearning() {
+  if (isLearning) stopLearning();
+  else startLearning();
+}
+
+function updateDiscoverButton() {
+  const btn = document.getElementById('btn-discover');
+  if (isLearning) {
+    btn.innerHTML = '&#128269; Learning...';
+    btn.classList.add('active');
+  } else {
+    btn.innerHTML = '&#128269; Discover';
+    btn.classList.remove('active');
+  }
+}
+
+let discoverPanelScheduled = false;
+
+function scheduleDiscoverPanelUpdate() {
+  if (!discoverPanelScheduled) {
+    discoverPanelScheduled = true;
+    requestAnimationFrame(() => {
+      discoverPanelScheduled = false;
+      buildDiscoverPanel();
+    });
+  }
+}
+
+function openDiscoverPanel() {
+  const panel = document.getElementById('discover-panel');
+  const btn = document.getElementById('btn-discover');
+  const rect = btn.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 8) + 'px';
+  panel.style.left = Math.max(8, rect.left) + 'px';
+  panel.classList.add('open');
+  buildDiscoverPanel();
+}
+
+function closeDiscoverPanel() {
+  document.getElementById('discover-panel').classList.remove('open');
+}
+
+function buildDiscoverPanel() {
+  const panel = document.getElementById('discover-panel');
+  panel.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'header';
+  const h3 = document.createElement('h3');
+  h3.textContent = isLearning ? 'Learning...' : 'Discoveries';
+  header.appendChild(h3);
+  const counter = document.createElement('span');
+  counter.className = 'counter';
+  counter.textContent = `${soupsSearched} soups`;
+  header.appendChild(counter);
+  panel.appendChild(header);
+
+  if (discoveredMap.size === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = isLearning ? 'Searching for objects...' : 'Click Discover to start';
+    panel.appendChild(empty);
+    return;
+  }
+
+  const entries = [...discoveredMap.values()].sort((a, b) => b.count - a.count);
+
+  const sep = document.createElement('div');
+  sep.className = 'separator';
+  panel.appendChild(sep);
+
+  for (const entry of entries) {
+    const row = document.createElement('div');
+    row.className = 'entry';
+
+    const pts = entry.cells;
+    const minX = Math.min(...pts.map(p => p[0]));
+    const minY = Math.min(...pts.map(p => p[1]));
+    const maxX = Math.max(...pts.map(p => p[0]));
+    const maxY = Math.max(...pts.map(p => p[1]));
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+    const cellPx = Math.min(Math.floor(20 / bw), Math.floor(20 / bh), 6);
+    const ox = Math.floor((24 - bw * cellPx) / 2);
+    const oy = Math.floor((24 - bh * cellPx) / 2);
+
+    const mini = document.createElement('canvas');
+    mini.className = 'mini-canvas';
+    mini.width = 24;
+    mini.height = 24;
+    const mctx = mini.getContext('2d');
+    mctx.fillStyle = '#0a0a0f';
+    mctx.fillRect(0, 0, 24, 24);
+    mctx.fillStyle = state.cellColor;
+    for (const [x, y] of pts) {
+      mctx.fillRect(ox + (x - minX) * cellPx, oy + (y - minY) * cellPx, cellPx, cellPx);
+    }
+    row.appendChild(mini);
+
+    const info = document.createElement('div');
+    info.className = 'info';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'name';
+    nameSpan.textContent = `${entry.pop} cells`;
+    info.appendChild(nameSpan);
+    const countSpan = document.createElement('span');
+    countSpan.className = 'count';
+    countSpan.textContent = `found ${entry.count} time${entry.count !== 1 ? 's' : ''}`;
+    info.appendChild(countSpan);
+    row.appendChild(info);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-add';
+    addBtn.textContent = 'Add';
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      addDiscoveredPattern(entry);
+    });
+    row.appendChild(addBtn);
+
+    row.addEventListener('click', () => {
+      closeDiscoverPanel();
+      const def = {
+        name: `${entry.pop} cells (${entry.count})`,
+        rows: cellsToRows(entry.cells)
+      };
+      enterPlacementMode(def);
+    });
+
+    panel.appendChild(row);
+  }
+}
+
+function cellsToRows(cells) {
+  const minX = Math.min(...cells.map(p => p[0]));
+  const minY = Math.min(...cells.map(p => p[1]));
+  const maxX = Math.max(...cells.map(p => p[0]));
+  const maxY = Math.max(...cells.map(p => p[1]));
+  const grid = Array.from({ length: maxY - minY + 1 }, () =>
+    Array.from({ length: maxX - minX + 1 }, () => '.'));
+  for (const [x, y] of cells) grid[y - minY][x - minX] = '#';
+  return grid.map(r => r.join(''));
+}
+
+function addDiscoveredPattern(entry) {
+  const def = {
+    name: `${entry.pop} cells`,
+    category: 'Discovered',
+    rows: cellsToRows(entry.cells)
+  };
+  PATTERNS.push(def);
+  buildPatternsDropdown();
+  closeDiscoverPanel();
+  enterPlacementMode(def);
+  showToast('Pattern added! Place it on the grid.');
+}
+
+document.getElementById('btn-discover').addEventListener('click', toggleLearning);
+
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('discover-panel');
+  const btn = document.getElementById('btn-discover');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) {
+    closeDiscoverPanel();
+  }
 });
 
 function showToast(message) {

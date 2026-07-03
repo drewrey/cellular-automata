@@ -205,4 +205,31 @@ test.describe('Cellular Automata', () => {
     const pop = parseInt(popText || '0');
     expect(pop).toBe(5);
   });
+
+  test('9. Pattern discovery finds objects from random soups', async ({ page }) => {
+    // Expand secondary toolbar to access Discover button
+    await page.locator('#btn-toggle-more').click();
+
+    // Click Discover to start learning
+    await page.locator('#btn-discover').click();
+    await page.waitForTimeout(200);
+
+    // Verify button shows active state
+    await expect(page.locator('#btn-discover')).toHaveClass(/active/);
+
+    // Wait for some discoveries
+    await page.waitForTimeout(3000);
+
+    // Stop learning
+    await page.locator('#btn-discover').click();
+
+    // Panel should show discoveries and soup count
+    const panel = page.locator('#discover-panel');
+    await expect(panel).toBeVisible();
+
+    // Should have found at least some objects
+    const counterText = await page.locator('.discover-panel .counter').textContent();
+    const soups = parseInt(counterText || '0');
+    expect(soups).toBeGreaterThan(0);
+  });
 });
