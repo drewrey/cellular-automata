@@ -1055,8 +1055,23 @@ document.getElementById('btn-toggle-more').addEventListener('click', () => {
   btn.title = expanded ? 'Fewer tools' : 'More tools';
 });
 
-document.getElementById('speed-slider').addEventListener('input', (e) => {
-  state.speed = parseInt(e.target.value);
+const SPEED_STEPS = [1, 2, 5, 10, 20, 30, 60];
+
+function updateSpeedDisplay() {
+  const idx = SPEED_STEPS.indexOf(state.speed);
+  document.getElementById('speed-display').textContent = state.speed + ' fps';
+  document.getElementById('btn-speed-down').disabled = idx <= 0;
+  document.getElementById('btn-speed-up').disabled = idx >= SPEED_STEPS.length - 1;
+}
+
+document.getElementById('btn-speed-down').addEventListener('click', () => {
+  const idx = SPEED_STEPS.indexOf(state.speed);
+  if (idx > 0) { state.speed = SPEED_STEPS[idx - 1]; updateSpeedDisplay(); }
+});
+
+document.getElementById('btn-speed-up').addEventListener('click', () => {
+  const idx = SPEED_STEPS.indexOf(state.speed);
+  if (idx < SPEED_STEPS.length - 1) { state.speed = SPEED_STEPS[idx + 1]; updateSpeedDisplay(); }
 });
 
 function togglePlay() {
@@ -1879,6 +1894,7 @@ if (getRecentColors().length === 0) {
 }
 
 updateColorButton(state.cellColor);
+updateSpeedDisplay();
 
 if (window.location.hash && window.location.hash.length > 1) {
   const loaded = loadFromHash();

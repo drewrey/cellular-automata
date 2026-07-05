@@ -273,9 +273,24 @@ canvas.placing {
   color: #888;
 }
 
-.toolbar input[type="range"] {
-  width: 80px;
-  accent-color: #6ab4ff;
+.speed-control button {
+  padding: 4px 9px !important;
+  font-size: 16px !important;
+  line-height: 1;
+}
+
+.speed-control button:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+#speed-display {
+  font-size: 12px;
+  color: #aaa;
+  min-width: 44px;
+  text-align: center;
+  user-select: none;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
@@ -292,16 +307,6 @@ canvas.placing {
     .toolbar-row {
       flex-wrap: wrap;
       gap: 6px;
-    }
-
-    .toolbar .speed-control {
-      order: 10;
-      width: 100%;
-      margin-top: 4px;
-    }
-
-    .toolbar input[type="range"] {
-      width: 100%;
     }
 
     .toolbar .separator {
